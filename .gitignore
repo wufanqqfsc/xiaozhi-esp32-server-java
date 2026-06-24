@@ -38,3 +38,6 @@ datasets/
 .cursor/
 .DS_Store
 CLAUDE.md
+
+# FunASR 运行时资源（模型文件）
+funasr-runtime-resources/

@@ -4,7 +4,7 @@
 
 services:
   mysql:
-    image: mysql:8.0-debian
+    image: mysql:8.0
     container_name: xiaozhi-mysql
     restart: always
     ports:

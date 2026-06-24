@@ -3,10 +3,13 @@ package com.xiaozhi.server.web.chat;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
 import com.xiaozhi.common.model.ChatToken;
+import com.xiaozhi.common.web.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.MediaType;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
@@ -34,11 +37,13 @@ public class WebChatController {
     @PostMapping("/open")
     @SaCheckPermission("system:chat:api:open")
     @Operation(summary = "开启聊天会话", description = "创建或续接 Web 聊天会话并返回 sessionId")
-    public Map<String, String> open(@RequestParam Integer roleId,
-                                    @RequestParam(required = false) String sessionId) {
+    @Validated
+    public ApiResponse<Map<String, String>> open(
+            @RequestParam @Min(value = 1, message = "角色ID必须大于0") Integer roleId,
+            @RequestParam(required = false) String sessionId) {
         Integer userId = StpUtil.getLoginIdAsInt();
         String openedSessionId = webChatService.openSession(userId, roleId, sessionId);
-        return Map.of("sessionId", openedSessionId);
+        return ApiResponse.success(Map.of("sessionId", openedSessionId));
     }
 
     /**
