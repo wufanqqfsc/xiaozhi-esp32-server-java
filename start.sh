@@ -5,19 +5,21 @@
 # 用法:
 #   ./start.sh                    一键启动（下载模型 + 编译 + 启动后端）
 #   ./start.sh start             同上
-#   ./start.sh stop               停止后端
-#   ./start.sh restart            重启后端
+#   ./start.sh stop               停止后端 + FunASR
+#   ./start.sh restart            重启后端 + FunASR
 #   ./start.sh status            查看后端服务状态
 #   ./start.sh logs [name]        查看日志（all | server | dialogue | web）
 #   ./start.sh db-only           仅启动 MySQL + Redis（Docker）
 #   ./start.sh db-down            停止并销毁 DB 容器
 #   ./start.sh web                启动前端管理平台（Vue dev server）
-#   ./start.sh all                启动全部：DB + 后端 + 前端
+#   ./start.sh funasr <action>    控制 FunASR 语音服务（包装 bin/funasr.sh）
+#   ./start.sh all                启动全部：DB + 后端 + 前端 + FunASR
 #   ./start.sh clean              清理编译产物
 #
 # 环境变量:
 #   SKIP_DOWNLOAD=1   跳过模型/原生库下载
 #   SKIP_BUILD=1      跳过 Maven 编译
+#   SKIP_FUNASR=1     跳过 FunASR 启动（用于 all）
 #   JAVA_HOME=<path> 指定 Java（默认 /opt/homebrew/Cellar/openjdk/25.0.2）
 #   DB_MODE=docker    DB 模式：docker（默认）| local（需本机安装 MySQL+Redis）
 # =============================================================================
@@ -36,6 +38,11 @@ WEB_DIR="$ROOT_DIR/web"
 SERVER_NAME="xiaozhi-server";   SERVER_MODULE="xiaozhi-server";   SERVER_PORT=8091
 DIALOGUE_NAME="xiaozhi-dialogue"; DIALOGUE_MODULE="xiaozhi-dialogue"; DIALOGUE_PORT=8092
 WEB_PORT=8084
+
+# ---- FunASR 语音服务 ----
+FUNASR_NAME="xiaozhi-funasr"
+FUNASR_SCRIPT="$ROOT_DIR/bin/funasr.sh"
+FUNASR_PORT=10096
 
 # ---- Java ----
 JAVA_HOME="${JAVA_HOME:-/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home}"
@@ -157,10 +164,11 @@ port_in_use() {
 }
 
 wait_port() {
-  local host="${1:-}" port="${2:-}" name="${3:-}" timeout="${4:-90}"
+  local host="${1-127.0.0.1}" port="${2-0}" name="${3-port}" timeout="${4-90}"
+  : "${host:=127.0.0.1}" "${port:=0}" "${name:=port}" "${timeout:=90}"
   local i=0
   while (( i < timeout )); do
-    if (echo >/dev/tcp/"$host"/"$port") >/dev/null 2>&1; then
+    if [[ "$port" -gt 0 ]] && (echo >/dev/tcp/"$host"/"$port") >/dev/null 2>&1; then
       return 0
     fi
     sleep 1; (( i++ ))
@@ -448,6 +456,58 @@ web_status() {
 }
 
 # =============================================================================
+# FunASR 语音服务（Docker 容器，包装 bin/funasr.sh）
+# =============================================================================
+
+start_funasr() {
+  if [[ "${SKIP_FUNASR:-0}" == "1" ]]; then
+    warn "SKIP_FUNASR=1 跳过 FunASR"
+    return 0
+  fi
+  if [[ ! -x "$FUNASR_SCRIPT" ]]; then
+    warn "FunASR 脚本不存在或不可执行: $FUNASR_SCRIPT"
+    return 0
+  fi
+  # 已运行则跳过
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${FUNASR_NAME}$"; then
+    ok "FunASR 已在运行（容器 $FUNASR_NAME）"
+    return 0
+  fi
+  info "启动 FunASR 语音服务（port $FUNASR_PORT）..."
+  bash "$FUNASR_SCRIPT" start >> "$LOGS_DIR/funasr.log" 2>&1 || {
+    err "FunASR 启动失败，查看日志: logs/funasr.log"
+    return 1
+  }
+  ok "FunASR 已启动  端口: $FUNASR_PORT  日志: logs/funasr.log"
+}
+
+stop_funasr() {
+  if [[ ! -x "$FUNASR_SCRIPT" ]]; then
+    return 0
+  fi
+  if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${FUNASR_NAME}$"; then
+    return 0
+  fi
+  info "停止 FunASR..."
+  bash "$FUNASR_SCRIPT" stop >> "$LOGS_DIR/funasr.log" 2>&1 || true
+  ok "FunASR 已停止"
+}
+
+funasr_status() {
+  echo -e "  ${BOLD}FunASR${NC}  容器: $FUNASR_NAME  端口: $FUNASR_PORT"
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${FUNASR_NAME}$"; then
+    echo -e "    ${GREEN}●${NC} 运行中"
+  else
+    echo -e "    ${RED}○${NC} 未运行"
+  fi
+  if lsof -iTCP:"$FUNASR_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+    echo -e "    ${GREEN}●${NC} 端口 $FUNASR_PORT 监听中"
+  else
+    echo -e "    ${RED}○${NC} 端口 $FUNASR_PORT 未监听"
+  fi
+}
+
+# =============================================================================
 # 复合命令
 # =============================================================================
 
@@ -468,6 +528,7 @@ start_all() {
   cleanup_all_ports
   db_up
   download_models
+  start_funasr
   start_backend
   start_web
   banner "启动完成"
@@ -478,6 +539,7 @@ ${BOLD}访问地址：${NC}
   ${GREEN}▸${NC} 管理平台前端  http://localhost:$WEB_PORT
   ${GREEN}▸${NC} Server API    http://localhost:$SERVER_PORT
   ${GREEN}▸${NC} Dialogue WS    ws://localhost:$DIALOGUE_PORT
+  ${GREEN}▸${NC} FunASR WS      ws://localhost:$FUNASR_PORT
 
 ${BOLD}常用命令：${NC}
   ./start.sh status    # 查看状态
@@ -490,13 +552,16 @@ EOF
 stop_all() {
   stop_web
   stop_backend
+  stop_funasr
   ok "全部已停止"
 }
 
 restart_all() {
   stop_web
   stop_backend
+  stop_funasr
   sleep 2
+  start_funasr
   start_backend
   start_web
   ok "重启完成"
@@ -512,6 +577,9 @@ show_status() {
   echo ""
   echo -e "${BOLD}前端：${NC}"
   web_status
+  echo ""
+  echo -e "${BOLD}AI 服务：${NC}"
+  funasr_status
   echo ""
 }
 
@@ -544,27 +612,31 @@ usage() {
 
 命令:
   start              下载模型 + 编译 + 启动后端        [默认]
-  stop               停止后端
-  restart            重启后端
+  stop               停止后端 + FunASR
+  restart            重启后端 + FunASR
   status             查看全部服务状态
   logs [name]        查看日志（all|server|dialogue|web），默认 all
   db-only            仅启动 DB（MySQL + Redis）
   db-down            停止并销毁 DB 容器
   web                仅启动前端（Vue dev server）
-  all                启动全部：DB + 后端 + 前端
+  funasr <action>    控制 FunASR 语音服务（start|stop|restart|status|logs）
+  all                启动全部：DB + 后端 + 前端 + FunASR
   clean              清理编译产物
 
 环境变量:
   SKIP_DOWNLOAD=1   跳过模型/原生库下载
   SKIP_BUILD=1       跳过 Maven 编译
+  SKIP_FUNASR=1      跳过 FunASR 启动（用于 all）
   JAVA_HOME=<path>   指定 Java（默认 /opt/homebrew/Cellar/openjdk/25.0.2）
 
 示例:
   $0                       # 后端一键启动
-  $0 all                   # 全部启动（DB + 后端 + 前端）
+  $0 all                   # 全部启动（DB + 后端 + 前端 + FunASR）
   $0 logs server           # 查看 server 日志
   $0 db-only && $0 start   # 先 DB 后端端分离启动
+  $0 funasr status         # 查看 FunASR 状态
   SKIP_DOWNLOAD=1 $0 start # 跳过下载快速启动
+  SKIP_FUNASR=1 $0 all     # 启动全部但跳过 FunASR
 EOF
 }
 
@@ -582,6 +654,11 @@ main() {
     db-only)       db_up; db_status ;;
     db-down)       db_down ;;
     web)           start_web; web_status ;;
+    funasr)
+      [[ -x "$FUNASR_SCRIPT" ]] || fail "FunASR 脚本不存在或不可执行: $FUNASR_SCRIPT"
+      local action="${1:-status}"
+      bash "$FUNASR_SCRIPT" "$action"
+      ;;
     all)           start_all ;;
     clean)
       banner "清理"

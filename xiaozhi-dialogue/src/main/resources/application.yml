@@ -72,8 +72,8 @@ mybatis-plus:
 # ============================================================
 logging:
   level:
-    root: INFO
-    org.springframework: INFO
+    root: DEBUG
+    org.springframework: DEBUG
     io.netty.handler: ERROR
 
 # ============================================================

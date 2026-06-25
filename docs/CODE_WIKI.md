@@ -10,6 +10,11 @@
 6. [关键类与函数](#6-关键类与函数)
 7. [配置说明](#7-配置说明)
 8. [运行方式](#8-运行方式)
+   - [8.1 start.sh 一键启动脚本](#81-startsh-一键启动脚本)
+   - [8.2 开发环境](#82-开发环境)
+   - [8.3 Docker 部署](#83-docker-部署)
+   - [8.4 配置文件](#84-配置文件)
+   - [8.5 数据库初始化](#85-数据库初始化)
 9. [附录](#附录)
    - [A. 关键设计模式](#a-关键设计模式)
    - [B. 消息类型定义](#b-消息类型定义)
@@ -609,9 +614,123 @@ TTS_MODEL=vits-melo-tts-zh_en
 
 ## 8. 运行方式
 
-### 8.1 开发环境
+### 8.1 start.sh 一键启动脚本
 
-#### 8.1.1 准备依赖
+项目根目录下的 [`start.sh`](file:///Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/start.sh) 是统一的服务管理脚本，封装了端口清理、DB 启动、模型下载、Maven 编译、后端启停、前端启动等全流程，底层使用 `set -euo pipefail`，任意一步失败会立即退出。
+
+#### 8.1.1 完整命令速查表
+
+| 命令 | 等价操作 | 说明 |
+|------|---------|------|
+| `./start.sh` | `./start.sh start` | **一键启动后端**：清理日志 → 清理端口 → 启动 DB → 下载模型 → 编译 → 启动 server+dialogue |
+| `./start.sh start` | 同上 | 一键启动后端（默认命令） |
+| `./start.sh all` | — | **启动全部服务**：DB + 后端 + 前端（Vue dev server） |
+| `./start.sh stop` | — | 停止后端两个进程（xiaozhi-server、xiaozhi-dialogue） |
+| `./start.sh restart` | — | 停止后重新启动后端（**不重启前端**） |
+| `./start.sh status` | — | 显示数据库、后端、前端运行状态及 PID |
+| `./start.sh logs` | `./start.sh logs all` | 查看后端 + 前端日志（每个 20 行） |
+| `./start.sh logs server` | — | 实时跟踪 server 日志（`tail -f`） |
+| `./start.sh logs dialogue` | — | 实时跟踪 dialogue 日志 |
+| `./start.sh logs web` | — | 实时跟踪前端 dev server 日志 |
+| `./start.sh db-only` | — | 仅启动 MySQL + Redis 容器，不启动后端 |
+| `./start.sh db-down` | — | 停止并销毁 MySQL + Redis 容器 |
+| `./start.sh web` | — | 仅启动前端管理平台（端口 8084） |
+| `./start.sh clean` | — | 清理 `run/*.pid` 和 Maven 编译产物 |
+| `./start.sh --help` | `./start.sh -h` / `./start.sh help` | 打印完整用法 |
+
+#### 8.1.2 环境变量
+
+| 变量 | 默认值 | 作用 |
+|------|--------|------|
+| `SKIP_DOWNLOAD=1` | 不跳过 | 跳过原生库与基础模型的下载 |
+| `SKIP_BUILD=1` | 不跳过 | 跳过 Maven 编译 |
+| `JAVA_HOME` | `/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home` | Java 安装目录 |
+| `DB_MODE=docker` | `docker` | DB 模式：`docker`（默认，启动容器） \| `local`（使用本机 MySQL+Redis） |
+
+#### 8.1.3 服务端口与进程名
+
+| 服务 | 端口 | 模块 | 进程名（PID 文件） | 日志文件 |
+|------|------|------|------------------|---------|
+| MySQL | 3306 | docker | `xiaozhi-mysql` | Docker 管理 |
+| Redis | 6379 | docker | `xiaozhi-redis` | Docker 管理 |
+| xiaozhi-server（管理后台 REST API） | 8091 | `xiaozhi-server` | `run/xiaozhi-server.pid` | `logs/xiaozhi-server.log` |
+| xiaozhi-dialogue（WebSocket 对话） | 8092 | `xiaozhi-dialogue` | `run/xiaozhi-dialogue.pid` | `logs/xiaozhi-dialogue.log` |
+| xiaozhi-web（Vue 管理平台） | 8084 | `web/` | `run/xiaozhi-web.pid` | `logs/xiaozhi-web.log` |
+
+#### 8.1.4 典型使用流程
+
+```bash
+# 1. 首次启动（下载模型 + 编译 + 启动后端）
+cd xiaozhi-esp32-server-java
+./start.sh
+
+# 2. 验证运行状态
+./start.sh status
+
+# 3. 查看实时日志（新开终端）
+./start.sh logs server
+./start.sh logs dialogue
+
+# 4. 启动管理后台前端
+./start.sh web
+# 浏览器访问 http://localhost:8084
+# 默认账号 admin / 123456
+
+# 5. 仅启动 DB（开发调试场景，先 DB 再后端）
+./start.sh db-only
+SKIP_BUILD=1 ./start.sh start
+
+# 6. 重启后端（代码更新后）
+./start.sh restart
+
+# 7. 销毁 DB 容器（清空数据）
+./start.sh db-down
+
+# 8. 一键停止
+./start.sh stop
+```
+
+#### 8.1.5 前置依赖检查
+
+`start.sh` 在启动前会自动检查（任意缺失会立即报错并退出）：
+
+| 工具 | 检查位置 | 最低版本 |
+|------|---------|---------|
+| Java | `$JAVA_HOME/bin/java` | **Java 21+** |
+| Maven | `mvn` | 任意版本 |
+| Node.js | `node` | **v20+**（仅启动 web 时） |
+| Docker | `docker` + `docker info` | 运行中的 Docker Desktop（DB 模式） |
+| `lsof` | — | 端口占用检查（macOS 自带） |
+
+#### 8.1.6 关键内部函数
+
+| 函数 | 行号范围 | 职责 |
+|------|---------|------|
+| `cleanup_port` | 73-104 | 释放指定端口占用进程（`lsof` → `kill` → `kill -9`） |
+| `cleanup_all_ports` | 106-111 | 批量清理 8091/8092/8084 应用端口 |
+| `check_java / check_maven / check_node / check_docker` | 119-148 | 前置依赖检查 |
+| `wait_port` | 159-171 | TCP 端口就绪探测（带超时，默认 90s） |
+| `start_service` | 297-324 | 启动单个 Java 模块（写 PID、输出日志） |
+| `start_backend` | 326-332 | 编译 + 启动 server + dialogue + 端口探测 |
+| `stop_service / stop_backend` | 334-362 | 通过 PID 文件优雅停止（kill → 等 15s → kill -9） |
+| `db_up / db_down / db_status` | 192-252 | MySQL + Redis Docker Compose 生命周期管理 |
+| `download_models` | 258-274 | 调用 `scripts/download_base.sh` 下载原生库 |
+| `build_backend` | 280-291 | `mvn clean install -DskipTests -q` |
+
+#### 8.1.7 常见问题排查
+
+| 现象 | 原因 | 排查方法 |
+|------|------|---------|
+| `port 8091 已被占用` | 之前启动的进程未正常停止 | `./start.sh stop` 后再启动；或 `lsof -nP -iTCP:8091` 查看占用进程 |
+| `需要 Java 21+` | JDK 版本过低 | `brew install openjdk@25` 或设置 `JAVA_HOME` |
+| `Docker daemon 未运行` | Docker Desktop 未启动 | 启动 Docker Desktop 后重试 |
+| `MySQL 健康检查未在 60s 内完成` | 镜像拉取慢或机器性能差 | 重试，或 `docker logs xiaozhi-mysql` 查看详情 |
+| `mvn` 卡住 | 网络问题导致依赖下载慢 | 配置 Maven 镜像（`~/.m2/settings.xml`） |
+| 日志乱码 | 终端编码非 UTF-8 | `export LANG=en_US.UTF-8` |
+
+### 8.2 开发环境
+
+#### 8.2.1 准备依赖
 
 ```bash
 # 安装 MySQL 8.0+ 和 Redis 7+
@@ -622,14 +741,14 @@ mysql -u root -p < db/init.sql
 # 安装 Maven 3.8+
 ```
 
-#### 8.1.2 编译项目
+#### 8.2.2 编译项目
 
 ```bash
 cd xiaozhi-esp32-server-java
 mvn clean install -DskipTests
 ```
 
-#### 8.1.3 启动服务
+#### 8.2.3 启动服务
 
 ```bash
 # 启动管理后台 (8091)
@@ -641,7 +760,7 @@ cd xiaozhi-dialogue
 mvn spring-boot:run
 ```
 
-#### 8.1.4 前端开发
+#### 8.2.4 前端开发
 
 ```bash
 cd web
@@ -650,7 +769,7 @@ npm run dev
 # 访问 http://localhost:8084
 ```
 
-### 8.2 Docker 部署
+### 8.3 Docker 部署
 
 ```bash
 # 一键启动所有服务
@@ -666,7 +785,7 @@ docker-compose up -d
 - 对话服务: ws://localhost:8092
 - Swagger文档: http://localhost:8091/doc.html
 
-### 8.3 配置文件
+### 8.4 配置文件
 
 | 环境 | 配置文件 |
 |------|----------|
@@ -674,7 +793,7 @@ docker-compose up -d
 | 生产 | `web/.env.production` |
 | 示例 | `web/.env.local.example` |
 
-### 8.4 数据库初始化
+### 8.5 数据库初始化
 
 Flyway 会自动执行 `db/` 目录下的迁移脚本：
 
@@ -799,5 +918,5 @@ db/
 
 ---
 
-*文档版本: 5.0.0*
-*最后更新: 2026-06-23*
+*文档版本: 5.1.0*
+*最后更新: 2026-06-24*
