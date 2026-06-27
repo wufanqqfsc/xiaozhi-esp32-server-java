@@ -173,7 +173,6 @@ wait_port() {
     fi
     sleep 1; (( i++ ))
   done
-  err "$name 未在 ${timeout}s 内就绪（$host:$port）"
   return 1
 }
 
@@ -463,7 +462,7 @@ start_web() {
 
   local pkg
   pkg="$(detect_pkg)"
-  info "启动前端 dev server（port $WEB_PORT）..."
+  info "启动前端 dev server（port ${WEB_PORT:-8084}）..."
   cd "$WEB_DIR"
   nohup $pkg run dev > "$LOGS_DIR/xiaozhi-web.log" 2>&1 &
   local web_pid=$!
@@ -505,50 +504,60 @@ web_status() {
 # =============================================================================
 
 start_funasr() {
+  # 防御性默认值（用 local 变量独立于全局作用域，规避 set -u 边界问题）
+  local name="${FUNASR_NAME:-xiaozhi-funasr}"
+  local script="${FUNASR_SCRIPT:-$ROOT_DIR/bin/funasr.sh}"
+  local port="${FUNASR_PORT:-10096}"
+
   if [[ "${SKIP_FUNASR:-0}" == "1" ]]; then
     warn "SKIP_FUNASR=1 跳过 FunASR"
     return 0
   fi
-  if [[ ! -x "$FUNASR_SCRIPT" ]]; then
-    warn "FunASR 脚本不存在或不可执行: $FUNASR_SCRIPT"
+  if [[ ! -x "$script" ]]; then
+    warn "FunASR 脚本不存在或不可执行: $script"
     return 0
   fi
   # 已运行则跳过
-  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${FUNASR_NAME}$"; then
-    ok "FunASR 已在运行（容器 $FUNASR_NAME）"
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${name}$"; then
+    ok "FunASR 已在运行"
     return 0
   fi
-  info "启动 FunASR 语音服务（port $FUNASR_PORT）..."
-  bash "$FUNASR_SCRIPT" start >> "$LOGS_DIR/funasr.log" 2>&1 || {
+  info "启动 FunASR 语音服务（port $port）..."
+  bash "$script" start >> "$LOGS_DIR/funasr.log" 2>&1 || {
     err "FunASR 启动失败，查看日志: logs/funasr.log"
     return 1
   }
-  ok "FunASR 已启动  端口: $FUNASR_PORT  日志: logs/funasr.log"
+  ok "FunASR 已启动  端口: $port  日志: logs/funasr.log"
 }
 
 stop_funasr() {
-  if [[ ! -x "$FUNASR_SCRIPT" ]]; then
+  local script="${FUNASR_SCRIPT:-$ROOT_DIR/bin/funasr.sh}"
+  local name="${FUNASR_NAME:-xiaozhi-funasr}"
+  if [[ ! -x "$script" ]]; then
     return 0
   fi
-  if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${FUNASR_NAME}$"; then
+  if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${name}$"; then
     return 0
   fi
   info "停止 FunASR..."
-  bash "$FUNASR_SCRIPT" stop >> "$LOGS_DIR/funasr.log" 2>&1 || true
+  bash "$script" stop >> "$LOGS_DIR/funasr.log" 2>&1 || true
   ok "FunASR 已停止"
 }
 
 funasr_status() {
-  echo -e "  ${BOLD}FunASR${NC}  容器: $FUNASR_NAME  端口: $FUNASR_PORT"
-  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${FUNASR_NAME}$"; then
+  local name="${FUNASR_NAME:-xiaozhi-funasr}"
+  local port="${FUNASR_PORT:-10096}"
+  local script="${FUNASR_SCRIPT:-$ROOT_DIR/bin/funasr.sh}"
+  echo -e "  ${BOLD}FunASR${NC}  容器: $name  端口: $port"
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${name}$"; then
     echo -e "    ${GREEN}●${NC} 运行中"
   else
     echo -e "    ${RED}○${NC} 未运行"
   fi
-  if lsof -iTCP:"$FUNASR_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-    echo -e "    ${GREEN}●${NC} 端口 $FUNASR_PORT 监听中"
+  if lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+    echo -e "    ${GREEN}●${NC} 端口 $port 监听中"
   else
-    echo -e "    ${RED}○${NC} 端口 $FUNASR_PORT 未监听"
+    echo -e "    ${RED}○${NC} 端口 $port 未监听"
   fi
 }
 
@@ -584,7 +593,7 @@ ${BOLD}访问地址：${NC}
   ${GREEN}▸${NC} 管理平台前端  http://localhost:$WEB_PORT
   ${GREEN}▸${NC} Server API    http://localhost:$SERVER_PORT
   ${GREEN}▸${NC} Dialogue WS    ws://localhost:$DIALOGUE_PORT
-  ${GREEN}▸${NC} FunASR WS      ws://localhost:$FUNASR_PORT
+  ${GREEN}▸${NC} FunASR WS      ws://localhost:${FUNASR_PORT:-10096}
 
 ${BOLD}常用命令：${NC}
   ./start.sh status    # 查看状态
@@ -700,9 +709,10 @@ main() {
     db-down)       db_down ;;
     web)           start_web; web_status ;;
     funasr)
-      [[ -x "$FUNASR_SCRIPT" ]] || fail "FunASR 脚本不存在或不可执行: $FUNASR_SCRIPT"
+      local fs="${FUNASR_SCRIPT:-$ROOT_DIR/bin/funasr.sh}"
+      [[ -x "$fs" ]] || fail "FunASR 脚本不存在或不可执行: $fs"
       local action="${1:-status}"
-      bash "$FUNASR_SCRIPT" "$action"
+      bash "$fs" "$action"
       ;;
     all)           start_all ;;
     clean)
