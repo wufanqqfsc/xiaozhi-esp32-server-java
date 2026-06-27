@@ -557,6 +557,8 @@ cat > ~/xiaozhi-funasr/hotwords.txt << EOF
 智能音箱 25
 阿里巴巴 20
 ESP32 20
+贾维斯 30
+Jarvis 30
 EOF
 ```
 

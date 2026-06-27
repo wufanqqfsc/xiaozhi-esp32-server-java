@@ -161,8 +161,8 @@ wait_ready() {
 
   while (( wait_time < max_wait )); do
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-      # 检查容器内 10095 端口是否在监听
-      if docker exec "$CONTAINER_NAME" bash -c "cat /proc/net/tcp 2>/dev/null | awk '{print \$2}' | grep -qi '275F'" 2>/dev/null; then
+      # 检查容器内 10095 端口是否在监听（/proc/net/tcp 的端口字段是小端序，10095 = 0x276F）
+      if docker exec "$CONTAINER_NAME" bash -c "cat /proc/net/tcp 2>/dev/null | awk 'NR>1 {print \$2}' | grep -qi '276F' || lsof -nP -iTCP:10096 -sTCP:LISTEN >/dev/null 2>&1" 2>/dev/null; then
         _ok "FunASR 服务就绪 (port $HOST_PORT)"
         return 0
       fi

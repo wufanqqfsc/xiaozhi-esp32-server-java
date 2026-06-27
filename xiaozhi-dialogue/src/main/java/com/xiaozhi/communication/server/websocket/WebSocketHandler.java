@@ -166,7 +166,9 @@ public class WebSocketHandler extends AbstractWebSocketHandler {
                 Thread.startVirtualThread(() -> {
                     DeviceBO device = chatSession != null ? chatSession.getDevice() : null;
                     if (device != null && device.getRoleId() != null) {
-                        deviceMcpService.initialize(chatSession);
+                        // v2.2.6+：使用 initializeWithUserTools 拉取 user-only 工具
+                        // （self.device.*, self.wifi.*, self.sdcard.*, self.files.*, self.display.*）
+                        deviceMcpService.initializeWithUserTools(chatSession);
                     }
                 });
             }

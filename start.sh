@@ -301,6 +301,48 @@ build_backend() {
 # 后端启停
 # =============================================================================
 
+# 自动检测本机 LAN IP（用于 ServerAddressProvider 正确返回给 ESP32 设备的 OTA URL）。
+# 优先取用户已 export 的 HOST_IP / DOCKER_HOST_IP / LOCAL_IP / XIAOZHI_HOST_IP，
+# 没有任何已设置时探测本机网络接口。
+# 修复背景：ServerAddressProvider 默认通过公网查询获取 IP，结果会因 ISP / VPN
+# 出现错误的公网地址，导致设备端 OTA 响应中 websocket.url 不可达。
+detect_lan_ip() {
+  for env_name in HOST_IP DOCKER_HOST_IP LOCAL_IP XIAOZHI_HOST_IP; do
+    local v="${!env_name:-}"
+    if [[ -n "$v" ]]; then
+      echo "$v"
+      return 0
+    fi
+  done
+  # macOS 取 en0；Linux 取 1.2.3.4 之外的第一个非 loopback 地址
+  local ip
+  if command -v ifconfig >/dev/null 2>&1; then
+    ip="$(ifconfig en0 2>/dev/null | awk '/inet / {print $2; exit}')"
+    if [[ -z "$ip" ]]; then
+      ip="$(ifconfig 2>/dev/null | awk '/inet / && $2 !~ /^127[.]/ {print $2; exit}')"
+    fi
+  elif command -v hostname >/dev/null 2>&1; then
+    ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  fi
+  echo "${ip:-}"
+}
+
+# 确保 LAN IP 已 export 到当前 shell（供后续 nohup java 进程继承）
+ensure_lan_ip_exported() {
+  local detected
+  detected="$(detect_lan_ip)"
+  if [[ -z "$detected" ]]; then
+    warn "未能自动检测 LAN IP，将由 ServerAddressProvider 走公网查询（可能不可达）"
+    return 0
+  fi
+  : "${HOST_IP:=$detected}"
+  : "${DOCKER_HOST_IP:=$detected}"
+  : "${LOCAL_IP:=$detected}"
+  : "${XIAOZHI_HOST_IP:=$detected}"
+  export HOST_IP DOCKER_HOST_IP LOCAL_IP XIAOZHI_HOST_IP
+  ok "已注入 LAN IP 环境变量: HOST_IP=$HOST_IP"
+}
+
 start_service() {
   local name="${1:-}" module="${2:-}" port="${3:-}"
 
@@ -312,6 +354,9 @@ start_service() {
     warn "端口 $port 已被占用，假设 $name 在外部运行"
     return 0
   fi
+
+  # 启动前确保 LAN IP 环境变量已就绪
+  ensure_lan_ip_exported
 
   local jar
   jar="$(find_jar "$module")"

@@ -52,4 +52,4 @@ exec ./funasr-wss-server-2pass \
   --port 10095 \
   --certfile "" \
   --keyfile "" \
-  --hotword /workspace/FunASR/runtime/websocket/hotwords.txt
+  --hotword /workspace/models/hotwords.txt
