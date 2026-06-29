@@ -93,6 +93,7 @@ public class MessageSender {
     public void sendTextMessage(ChatSession chatSession, String message) {
         try {
             if (chatSession == null || !chatSession.isOpen()) {
+                log.warn("sendTextMessage无法发送消息 - SessionId: {}, isOpen: {}", chatSession != null ? chatSession.getSessionId() : "null", chatSession != null ? chatSession.isOpen() : false);
                 return;
             }
             chatSession.sendTextMessage(message);
@@ -105,6 +106,7 @@ public class MessageSender {
     public void sendBinaryMessage(ChatSession chatSession, byte[] opusFrame) {
         try {
             if (chatSession == null || !chatSession.isOpen()) {
+                log.warn("发送Opus帧失败，session未打开 - SessionId: {}, isOpen: {}", chatSession != null ? chatSession.getSessionId() : "null", chatSession != null ? chatSession.isOpen() : false);
                 return;
             }
             chatSession.sendBinaryMessage(opusFrame);

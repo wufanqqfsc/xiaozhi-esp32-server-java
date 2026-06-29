@@ -18,14 +18,16 @@ public class CommonUtils {
             Pattern.compile("^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$");
 
     /**
-     * 判断 MAC 地址是否合法（格式正确且为单播地址）
+     * 判断 MAC 地址是否合法（格式正确，排除全FF广播地址）
      */
     public static boolean isMacAddressValid(String mac) {
         if (!MAC_PATTERN.matcher(mac).matches()) {
             return false;
         }
-        int firstByte = Integer.parseInt(mac.toLowerCase().split("[:-]")[0], 16);
-        return (firstByte & 1) == 0;
+        String[] parts = mac.toLowerCase().split("[:-]");
+        int firstByte = Integer.parseInt(parts[0], 16);
+        int lastByte = Integer.parseInt(parts[5], 16);
+        return !((firstByte & 1) != 0 && lastByte == 0xff);
     }
 
 

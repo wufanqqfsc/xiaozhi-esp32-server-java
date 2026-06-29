@@ -30,6 +30,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import lombok.extern.slf4j.Slf4j;
 /**
@@ -272,7 +273,23 @@ public class Persona {
     }
 
     /**
+     * 思考标签正则：用于清洗部分模型（MiniMax / DeepSeek-R1 / 各类 CoT）把
+     * <think>...</think> 内联在 content 文本中、Spring AI 没拆出 reasoningContent
+     * 导致 TTS 念出"我正在思考..."等元叙述的情况。DOTALL + 不区分大小写 + 含首尾空白。
+     */
+    private static final Pattern THINK_TAG_PATTERN =
+            Pattern.compile("(?is)\\s*<think>.*?</think>\\s*");
+
+    /**
      * 将 ChatResponse 流转换为 ChatToken 流，包含思考内容和正式回复。
+     * <p>
+     * 思考内容双重清洗：
+     * <ol>
+     *   <li>AssistantMessage.metadata.reasoningContent 走 ChatToken.thinking，
+     *       在 {@link #chat(UserMessage, boolean)} 中已被 Synthesizer 过滤</li>
+     *   <li>内联在 content 文本中的 {@code <think>...</think>} 标签，
+     *       由 {@link #THINK_TAG_PATTERN} 正则剥除</li>
+     * </ol>
      * <p>
      * Spring AI 1.1.0+ 中，启用 reasoningEffort 后，推理内容通过
      * {@code AssistantMessage.getProperties().get("reasoningContent")} 返回。
@@ -287,6 +304,9 @@ public class Persona {
                         tokens.add(ChatToken.thinking(r));
                     }
                     String text = message.getText();
+                    if (text != null) {
+                        text = THINK_TAG_PATTERN.matcher(text).replaceAll("").trim();
+                    }
                     if (text != null && !text.isEmpty()) {
                         tokens.add(ChatToken.content(text));
                     }

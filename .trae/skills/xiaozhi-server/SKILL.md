@@ -218,3 +218,148 @@ When investigating, jump straight to:
 - Model downloader: [bin/download-funasr-models.sh](file:///Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/bin/download-funasr-models.sh)
 - DB compose: [docker-compose-db.yml](file:///Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/docker-compose-db.yml)
 - Server info & creds: [SERVER_INFO.md](file:///Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/SERVER_INFO.md)
+- **REST API 文档**: [docs/API.md](file:///Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/docs/API.md)（12660 行完整 OpenAPI/Swagger 描述）
+
+## 13. REST API 端点速查表
+
+xiaozhi-server (port 8091) 暴露 **12 个 Controller / 41 个端点**，全部在 `/api/**` 前缀下，详见 [docs/API.md](file:///Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/docs/API.md)。Swagger UI 实时浏览：`http://localhost:8091/swagger-ui/index.html`。
+
+| Controller | Base Path | 端点数 | 主要职责 |
+|-----------|-----------|--------|---------|
+| `UserController` | `/api/user` | 11 | 登录/注册/Token/密码重置/微信登录/手机号登录 |
+| `DeviceController` | `/api/device` | 8 | OTA、CRUD、激活状态、批量更新 |
+| `RoleController` | `/api/role` | 7 | 角色 CRUD + TTS 测试 + sherpa-onnx 音色列表 |
+| `ConfigController` | `/api/config` | 4 | LLM/TTS/STT 配置 CRUD |
+| `TemplateController` | `/api/template` | 4 | 提示词模板 CRUD |
+| `MessageController` | `/api/message` | 4 | 对话消息 CRUD + 会话列表 |
+| `McpToolController` | `/api/mcpTool` | 5 | MCP 工具启用/禁用（角色级/全局） |
+| `AuthRoleController` | `/api/auth-role` | 3 | 后台 RBAC 权限分配 |
+| `MemoryController` | `/api/memory` | 2 | 摘要记忆查询/批量删除 |
+| `WebChatController` | `/api/chat` | 3 | Web 端 SSE 流式聊天 |
+| `AgentController` | `/api/agent` | 1 | Coze/Dify 智能体查询 |
+| `FileUploadController` + `MusicController` | `/api/file` | 2 | 通用文件上传 / 音乐上传 |
+
+### 13.1 完整端点路径
+
+#### 用户管理 (`/api/user`)
+```
+GET  /check-token          验证当前 Token，返回用户信息
+POST /refresh-token        刷新 Token 有效期
+POST /login                用户名/邮箱/手机号 + 密码登录
+POST /tel-login            手机号 + 短信验证码登录（未注册自动注册）
+POST /wx-login             微信 code 登录（未注册自动注册）
+POST /                     用户注册
+GET  /                     分页查询用户列表
+PUT  /{userId}             修改用户信息（需权限 system:setting:account:api:update）
+POST /resetPassword        通过邮箱验证码重置密码
+POST /sendEmailCaptcha     发送邮箱验证码
+POST /sendSmsCaptcha       发送短信验证码
+GET  /checkUser            检查用户名/手机号是否已存在
+```
+
+#### 设备管理 (`/api/device`)
+```
+GET|POST /ota              ESP32 OTA 请求处理（自动激活设备）
+PUT  /{deviceId}           更新设备信息
+DELETE /{deviceId}         删除设备
+POST /                     添加设备
+GET  /                     条件查询设备列表
+POST /ota/activate         查询 OTA 激活状态
+POST /batchUpdate          批量更新设备
+```
+
+#### 角色管理 (`/api/role`)
+```
+PUT  /{roleId}             更新角色信息
+DELETE /{roleId}           删除角色
+GET  /                     条件查询角色列表
+POST /                     添加角色
+GET  /testVoice            TTS 测试（返回音频流）
+GET  /sherpaVoices         获取本地 sherpa-onnx 可用音色列表
+```
+
+#### 配置管理 (`/api/config`)
+```
+PUT  /{configId}           更新配置（LLM/TTS/STT）
+DELETE /{configId}         删除配置
+GET  /                     条件查询配置列表
+POST /                     添加配置
+```
+
+#### 提示词模板 (`/api/template`)
+```
+GET    /                   分页查询模板
+POST   /                   添加模板
+PUT    /{templateId}       更新模板
+DELETE /{templateId}       删除模板
+```
+
+#### 对话消息 (`/api/message`)
+```
+GET    /                   分页查询对话消息
+POST   /batchDelete        批量删除设备消息
+GET    /conversations      查询用户的会话列表
+DELETE /{messageId}        删除单条消息
+```
+
+#### Web 聊天 (`/api/chat`) — SSE 流式
+```
+POST /open                 创建/续接 Web 聊天会话，返回 sessionId
+GET  /stream               SSE 流式聊天（?sessionId=...&text=...），event: thinking|content
+POST /close                关闭聊天会话
+```
+
+#### MCP 工具管理 (`/api/mcpTool`)
+```
+POST /role/{roleId}/exclude-tools    批量设置角色排除工具
+POST /role/{roleId}/tools-switch     切换单个角色工具启用状态
+POST /system-global                  切换全局工具状态
+GET  /system-global                  获取系统全局工具列表
+GET  /role/{roleId}/disabled-tools   获取禁用的工具列表
+```
+
+#### 后台权限角色 (`/api/auth-role`)
+```
+GET  /{authRoleId}/permissions        获取授权配置
+PUT  /{authRoleId}/permissions        更新授权配置
+GET  /                                条件查询后台角色列表
+```
+
+#### 记忆管理 (`/api/memory`)
+```
+GET    /summary/{roleId}/{deviceId}      查询指定角色的摘要记忆
+DELETE /summary/{roleId}/{deviceId}      批量删除指定角色的摘要记忆
+```
+
+#### 智能体管理 (`/api/agent`)
+```
+GET  /                       条件查询 Coze/Dify 智能体列表
+```
+
+#### 文件上传 (`/api/file`)
+```
+POST /upload                 通用文件上传（图片/音频/固件）
+POST /music                  音乐文件上传（铃声/提示音）
+```
+
+### 13.2 认证与权限约定
+
+- **认证方式**：Sa-Token（`Authorization: Bearer <token>` 或 Cookie）
+- **权限注解**：`@SaCheckPermission("system:xxx:yyy")`
+- **审计日志**：`@AuditLog(module="...", operation="...")`
+- **响应包装**：`ApiResponse<T>` 统一格式 `{ code, message, data }`
+- **参数校验**：`@Valid` + JSR-303 (`@NotBlank`, `@Email` 等)
+
+### 13.3 OTA 协议（ESP32 设备端）
+
+```
+请求：GET|POST /api/device/ota
+Header: Device-Id: <mac>, Client-Id: <uuid>, Authorization: Bearer <token>
+Body:  {
+  "application": { "name": "...", "version": "1.0.0" },
+  "device":       { "mac": "...", "chipModel": "esp32s3" }
+}
+响应：200 { server_time, websocket={url, token}, mqtt=..., firmware=... }
+```
+
+OTA 端点是**双端点**设计（GET + POST 同时存在），ESP32 固件侧通常用 POST（可携带更复杂 JSON）。

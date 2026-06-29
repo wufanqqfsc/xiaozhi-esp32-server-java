@@ -24,7 +24,10 @@
 #   DB_MODE=docker    DB 模式：docker（默认）| local（需本机安装 MySQL+Redis）
 # =============================================================================
 
-set -euo pipefail
+# set -euo pipefail
+# 注意：macOS 默认 bash 3.2 在 set -u 下对 local var=$() 模式存在已知 bug，
+# 会误报 unbound variable。改为仅 set -eo pipefail，依靠 set -e 捕获错误。
+set -eo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
@@ -504,7 +507,6 @@ web_status() {
 # =============================================================================
 
 start_funasr() {
-  # 防御性默认值（用 local 变量独立于全局作用域，规避 set -u 边界问题）
   local name="${FUNASR_NAME:-xiaozhi-funasr}"
   local script="${FUNASR_SCRIPT:-$ROOT_DIR/bin/funasr.sh}"
   local port="${FUNASR_PORT:-10096}"
@@ -522,12 +524,12 @@ start_funasr() {
     ok "FunASR 已在运行"
     return 0
   fi
-  info "启动 FunASR 语音服务（port $port）..."
+  info "启动 FunASR 语音服务（port ${port}）..."
   bash "$script" start >> "$LOGS_DIR/funasr.log" 2>&1 || {
     err "FunASR 启动失败，查看日志: logs/funasr.log"
     return 1
   }
-  ok "FunASR 已启动  端口: $port  日志: logs/funasr.log"
+  ok "FunASR 已启动  端口: ${port}  日志: logs/funasr.log"
 }
 
 stop_funasr() {

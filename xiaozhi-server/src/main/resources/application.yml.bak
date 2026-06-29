@@ -108,15 +108,10 @@ spring:
 # ============================================================
 logging:
   level:
-    root: WARN
-    com.xiaozhi: DEBUG
-    com.xiaozhi.server.web.chat: DEBUG
-    com.xiaozhi.ai.llm: TRACE
-    org.springframework.ai.openai: TRACE
-    org.springframework.web.reactive.function.client: TRACE
-    org.springframework.web.reactive.function.client.ExchangeFunctions: TRACE
-    reactor.netty.http.client: DEBUG
+    root: DEBUG
+    org.springframework: DEBUG
     io.github.imfangs.dify.client.impl.StreamEventDispatcher: ERROR
+    io.netty.handler: ERROR
 
 # ============================================================
 # 小智扩展配置

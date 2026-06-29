@@ -40,6 +40,14 @@ public class VadService {
     @Value("${vad.tail.keep.ms:300}")
     private int tailKeepMs;
 
+    /**
+     * 单轮聆听最长时长（毫秒），超过此值强制触发 SPEECH_END，
+     * 防止设备长时间卡在 LISTENING 状态（如 VAD 无法识别静音 / 持续拾取环境音 / 扬声器回声）。
+     * 默认 10000ms (10s)，可通过 application.yml 中 vad.max.listening.ms 调整。
+     */
+    @Value("${vad.max.listening.ms:10000}")
+    private long maxListeningMs;
+
     private static final int SILENCE_FRAME_THRESHOLD = 2;
     private static final int VAD_SAMPLE_SIZE = AudioUtils.BUFFER_SIZE;
     private static final int VAD_CONTEXT_SIZE = SileroVadModel.CONTEXT_SIZE;
@@ -67,6 +75,9 @@ public class VadService {
 
     private class VadState {
         private boolean speaking = false;
+
+        // VAD 会话开始时间（每次 initSession/reset 刷新），用于计算单轮最长聆听时长
+        private long sessionStartMs = System.currentTimeMillis();
         private long silenceTime = 0;
 
         private int consecutiveSilenceFrames = 0;
@@ -170,6 +181,7 @@ public class VadService {
 
         public void reset() {
             speaking = false;
+            sessionStartMs = System.currentTimeMillis();
             silenceTime = 0;
             consecutiveSilenceFrames = 0;
             consecutiveSpeechFrames = 0;
@@ -284,6 +296,17 @@ public class VadService {
                 //         state.getSilenceDuration(), state.getConsecutiveSilenceFrames(),
                 //         isSilence ? "sil" : "SPK",
                 //         hasEnergy ? "+E" : "");
+
+                // 单轮聆听时长硬性封顶：超过 maxListeningMs 强制触发 SPEECH_END，
+                // 覆盖"用户一直说话"和"用户没说话 + VAD 没识别到静音"两种场景。
+                long listeningElapsed = System.currentTimeMillis() - state.sessionStartMs;
+                if (listeningElapsed > maxListeningMs) {
+                    state.setSpeaking(false);
+                    log.info("聆听时长超过 {}ms ({}ms)，强制结束聆听 - SessionId: {}",
+                            maxListeningMs, listeningElapsed, sessionId);
+                    state.resetSilenceFrameCount();
+                    return new VadResult(VadStatus.SPEECH_END, pcmData);
+                }
 
                 if (!state.isSpeaking() && isSpeech && speechStartAllowed) {
                     state.pcmData.clear();
