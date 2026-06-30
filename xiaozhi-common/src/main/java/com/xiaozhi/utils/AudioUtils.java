@@ -25,7 +25,16 @@ public class AudioUtils {
 
     public static final int AUDIO_RETENTION_DAYS = 30;
     public static final int FRAME_SIZE = 960;
-    public static final int SAMPLE_RATE = 16000; // 采样率
+    public static final int SAMPLE_RATE = 16000;
+    /**
+     * 下发给 ESP32 播放的 TTS 音频采样率（48000Hz）。
+     * Concentus Opus 编码器固定以 48000Hz 输出（尽管构造函数接受其他值，
+     * 但内部 native encoder 实际始终按 48000Hz 工作）。
+     * ESP32 侧会自动将 48000Hz 解码后的 PCM 重采样到 I2S 输出采样率（24000Hz）进行播放。
+     * 注意：此值仅用于 TTS 输出链路（编码 → 下发 → 设备解码），与 VAD/STT 内部
+     * 信号处理采样率 SAMPLE_RATE (16000Hz) 无关。
+     */
+    public static final int TTS_OUTPUT_SAMPLE_RATE = 48000;
     public static final int CHANNELS = 1; // 单声道
     public static final int BITRATE = 48000; // 48kbps比特率（高质量，接近透明质量）
     public static final int SAMPLE_FORMAT = 1; // AV_SAMPLE_FMT_S16, 16位PCM
@@ -99,8 +108,8 @@ public class AudioUtils {
                 dos.writeInt(Integer.reverseBytes(16)); // 子块大小
                 dos.writeShort(Short.reverseBytes((short) 1)); // 音频格式 (1 = PCM)
                 dos.writeShort(Short.reverseBytes((short) CHANNELS)); // 通道数
-                dos.writeInt(Integer.reverseBytes(SAMPLE_RATE)); // 采样率
-                dos.writeInt(Integer.reverseBytes(SAMPLE_RATE * CHANNELS * bitsPerSample / 8)); // 字节率
+                dos.writeInt(Integer.reverseBytes(TTS_OUTPUT_SAMPLE_RATE)); // 采样率（TTS 输出 24kHz 与 ESP32 I2S 对齐）
+                dos.writeInt(Integer.reverseBytes(TTS_OUTPUT_SAMPLE_RATE * CHANNELS * bitsPerSample / 8)); // 字节率
                 dos.writeShort(Short.reverseBytes((short) (CHANNELS * bitsPerSample / 8))); // 块对齐
                 dos.writeShort(Short.reverseBytes((short) bitsPerSample)); // 每个样本的位数
 
@@ -175,8 +184,8 @@ public class AudioUtils {
                 dos.writeInt(Integer.reverseBytes(16)); // 子块大小
                 dos.writeShort(Short.reverseBytes((short) 1)); // 音频格式 (1 = PCM)
                 dos.writeShort(Short.reverseBytes((short) CHANNELS)); // 通道数
-                dos.writeInt(Integer.reverseBytes(SAMPLE_RATE)); // 采样率
-                dos.writeInt(Integer.reverseBytes(SAMPLE_RATE * CHANNELS * bitsPerSample / 8)); // 字节率
+                dos.writeInt(Integer.reverseBytes(TTS_OUTPUT_SAMPLE_RATE)); // 采样率（TTS 输出 24kHz 与 ESP32 I2S 对齐）
+                dos.writeInt(Integer.reverseBytes(TTS_OUTPUT_SAMPLE_RATE * CHANNELS * bitsPerSample / 8)); // 字节率
                 dos.writeShort(Short.reverseBytes((short) (CHANNELS * bitsPerSample / 8))); // 块对齐
                 dos.writeShort(Short.reverseBytes((short) bitsPerSample)); // 每个样本的位数
 
@@ -307,16 +316,16 @@ public class AudioUtils {
     }
 
     /**
-     * 从文件读取PCM数据并按Opus帧大小（3840字节 = 60ms）分块返回。
+     * 从文件读取PCM数据并按Opus帧大小（5760字节 = 60ms @ 24000Hz）分块返回。
      * 避免将整个音频文件作为单个byte[]持有，减少内存峰值。
      *
      * @param filePath 音频文件路径
-     * @return PCM数据分块列表，每块3840字节（最后一块可能更小）
+     * @return PCM数据分块列表，每块5760字节/24000Hz（最后一块可能更小）
      */
     public static List<byte[]> readAsPcmChunks(String filePath) throws IOException {
         byte[] pcmData = readAsPcm(filePath);
-        // 每个Opus帧对应的PCM大小：60ms × 16000Hz × 16bit / 8 = 3840 bytes
-        int chunkSize = OPUS_FRAME_DURATION_MS * SAMPLE_RATE * 2 / 1000; // 3840
+        // 每个Opus帧对应的PCM大小：60ms × 24000Hz × 16bit / 8 = 5760 bytes（TTS 输出 24kHz 与 ESP32 I2S 对齐）
+        int chunkSize = OPUS_FRAME_DURATION_MS * TTS_OUTPUT_SAMPLE_RATE * 2 / 1000; // dynamic (24000Hz: 5760 bytes)
         List<byte[]> chunks = new ArrayList<>();
         for (int i = 0; i < pcmData.length; i += chunkSize) {
             int end = Math.min(i + chunkSize, pcmData.length);
@@ -436,8 +445,8 @@ public class AudioUtils {
 
             byte[] pcmData = pcmOut.toByteArray();
             // 如果 MP3 采样率不是 16kHz，进行重采样
-            if (mp3SampleRate > 0 && mp3SampleRate != SAMPLE_RATE) {
-                pcmData = resamplePcm(pcmData, mp3SampleRate, SAMPLE_RATE);
+            if (mp3SampleRate > 0 && mp3SampleRate != TTS_OUTPUT_SAMPLE_RATE) {
+                pcmData = resamplePcm(pcmData, mp3SampleRate, TTS_OUTPUT_SAMPLE_RATE);
             }
             return pcmData;
         } catch (BitstreamException | DecoderException e) {
@@ -523,7 +532,7 @@ public class AudioUtils {
 
         // 创建OpusInfo对象，设置基本参数
         OpusInfo oi = new OpusInfo();
-        oi.setSampleRate(SAMPLE_RATE);
+        oi.setSampleRate(TTS_OUTPUT_SAMPLE_RATE); // TTS 输出 24kHz
         oi.setNumChannels(CHANNELS);
         oi.setPreSkip(0);
 
@@ -560,7 +569,7 @@ public class AudioUtils {
                 return getMp3Duration(path);
             } else if (pathStr.endsWith(".pcm")) {
                 long fileSize = Files.size(path);
-                return (double) fileSize / (SAMPLE_RATE * CHANNELS * 2);
+                return (double) fileSize / (TTS_OUTPUT_SAMPLE_RATE * CHANNELS * 2); // TTS 输出 PCM
             }
         } catch (Exception e) {
             log.debug("获取音频时长失败: {}", path, e);

@@ -359,6 +359,9 @@ start_service() {
 
   # 启动前确保 LAN IP 环境变量已就绪
   ensure_lan_ip_exported
+  # 强制使用脚本里配置的 JAVA_HOME 启动 java，避免 nohup 子进程用系统 java
+  export JAVA_HOME
+  export PATH="$JAVA_HOME/bin:$PATH"
 
   local jar
   jar="$(find_jar "$module")"
@@ -367,7 +370,7 @@ start_service() {
     return 1
   fi
 
-  nohup java \
+  nohup "$JAVA_HOME/bin/java" \
     -Djava.library.path="$ROOT_DIR/lib" \
     -jar "$jar" \
     >> "$LOGS_DIR/$name.log" 2>&1 &

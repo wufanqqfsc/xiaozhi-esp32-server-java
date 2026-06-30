@@ -9,6 +9,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 /**
  * 开启 Web 聊天会话。
  * 不传 sessionId 时创建新会话；传入已有 sessionId 时尝试续接（后端会校验归属）。
+ * 返回 Promise<DataResponse<{ sessionId: string }>>，调用方应从 resp.data.sessionId 取值。
  */
 export function openChatSession(roleId: number, sessionId?: string) {
   return http.post<{ sessionId: string }>('/chat/open', null, {

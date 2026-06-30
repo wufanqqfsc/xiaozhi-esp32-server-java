@@ -18,6 +18,6 @@ public class AudioParams {
     public static final AudioParams Opus = new AudioParams()
             .setChannels(1)
             .setFormat("opus")
-            .setSampleRate(16000)
+            .setSampleRate(48000)  // Concentus 编码器实际输出 48000Hz，ESP32 会自动重采样到 I2S 输出采样率
             .setFrameDuration(60);
 }

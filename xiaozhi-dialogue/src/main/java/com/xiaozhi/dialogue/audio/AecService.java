@@ -1,6 +1,7 @@
 package com.xiaozhi.dialogue.audio;
 
 import com.xiaozhi.event.TtsPlaybackCompletedEvent;
+import com.xiaozhi.utils.AudioUtils;
 import com.xiaozhi.utils.OpusProcessor;
 
 import dev.onvoid.webrtc.media.audio.AudioProcessing;
@@ -114,17 +115,23 @@ public class AecService {
         if (state == null) return;
 
         try {
-            // 用独立解码器解码参考 Opus 帧
+            // 用独立解码器解码参考 Opus 帧（24kHz，因为 TTS Opus 是 24kHz）
             byte[] pcm = state.refDecoder.opusToPcm(opusFrame);
             if (pcm == null || pcm.length == 0) return;
+
+            // APM 在 16kHz streamConfig 下运行，但解码器输出是 24kHz，需要重采样
+            // 24kHz → 16kHz：每 3 个样本取 2 个（24/16 = 1.5）
+            // 使用线性插值重采样以获得更好的回声抵消效果
+            byte[] pcm16k = AudioUtils.resamplePcm(pcm, AudioUtils.TTS_OUTPUT_SAMPLE_RATE, AudioUtils.SAMPLE_RATE);
+            if (pcm16k == null || pcm16k.length == 0) return;
 
             // 立即逐子帧调用 processReverseStream，以 TTS 实时节奏驱动参考通道
             synchronized (state.apmLock) {
                 if (state.disposed) return;
                 int offset = 0;
-                while (offset + FRAME_BYTES_10MS <= pcm.length) {
+                while (offset + FRAME_BYTES_10MS <= pcm16k.length) {
                     byte[] subFrame = new byte[FRAME_BYTES_10MS];
-                    System.arraycopy(pcm, offset, subFrame, 0, FRAME_BYTES_10MS);
+                    System.arraycopy(pcm16k, offset, subFrame, 0, FRAME_BYTES_10MS);
                     byte[] refOutput = new byte[FRAME_BYTES_10MS];
                     state.apm.processReverseStream(subFrame, state.streamConfig, state.streamConfig, refOutput);
                     offset += FRAME_BYTES_10MS;
@@ -220,7 +227,7 @@ public class AecService {
             // 设置初始延迟提示，帮助 AEC3 加速收敛（AEC3 内置延迟估计器会自动调整）
             apm.setStreamDelayMs(streamDelayMs);
 
-            refDecoder = new OpusProcessor();
+            refDecoder = new OpusProcessor(); // 编码器 24kHz（会实际输出 48kHz Opus），解码器 16kHz（设备上行 Opus） // AEC 参考：24kHz Opus, 24kHz decoder (后续 APM 内部会用 16kHz streamConfig)
             streamConfig = new AudioProcessingStreamConfig(16000, 1);
         }
 

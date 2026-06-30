@@ -90,7 +90,7 @@ public class TencentTtsService implements TtsService {
 
             request.setVolume(0f);
             request.setCodec("pcm");
-            request.setSampleRate(AudioUtils.SAMPLE_RATE);
+            request.setSampleRate(AudioUtils.TTS_OUTPUT_SAMPLE_RATE); // TTS 输出 24kHz (对齐 ESP32 I2S)
             request.setSessionId(UUID.randomUUID().toString());
 
             SpeechSynthesizerListener listener = new SpeechSynthesizerListener() {

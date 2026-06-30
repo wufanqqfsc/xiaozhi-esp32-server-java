@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import com.xiaozhi.common.utils.LatencyTracer;
+
 import lombok.extern.slf4j.Slf4j;
 /**
  * 语音合成器，用于非流式TTS（先生成完整音频文件再播放）。
@@ -81,6 +83,7 @@ public class FileSynthesizer extends Synthesizer {
                             sink.next(first ? new Speech(chunk, text).withMood(mood) : new Speech(chunk));
                             first = false;
                         }
+                        LatencyTracer.mark(chatSession.getSessionId(), "TTS_FIRST_CHUNK");
                     } else {
                         log.error("TTS服务返回空音频文件 - SessionId: {}", chatSession.getSessionId());
                     }

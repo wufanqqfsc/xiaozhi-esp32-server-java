@@ -141,9 +141,12 @@ export function useChatSession() {
       connecting.value = true
       try {
         const resp = await openChatSession(roleId, sessionId.value || undefined)
-        const data = resp as unknown as { sessionId: string }
-        sessionId.value = data.sessionId
-        activeSessionId.value = data.sessionId
+        const sid = resp?.data?.sessionId
+        if (!sid) {
+          throw new Error('开启会话失败：未返回 sessionId')
+        }
+        sessionId.value = sid
+        activeSessionId.value = sid
         openedNow = true
       } catch (e: unknown) {
         antMessage.error('建立会话失败: ' + (e instanceof Error ? e.message : String(e)))

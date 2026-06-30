@@ -88,7 +88,7 @@ public class OpusRecorder {
             try {
                 FileOutputStream fos = new FileOutputStream(audioPath.toFile());
                 OpusInfo oi = new OpusInfo();
-                oi.setSampleRate(AudioUtils.SAMPLE_RATE);
+                oi.setSampleRate(AudioUtils.TTS_OUTPUT_SAMPLE_RATE); // TTS 输出 24kHz
                 oi.setNumChannels(AudioUtils.CHANNELS);
                 oi.setPreSkip(0);
 

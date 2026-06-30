@@ -454,7 +454,7 @@ public class AliyunTtsService implements TtsService {
                         .text(text)
                         .rate(getSpeed().floatValue())
                         .pitch(getPitch().floatValue())
-                        .sampleRate(AudioUtils.SAMPLE_RATE)
+                        .sampleRate(AudioUtils.TTS_OUTPUT_SAMPLE_RATE)  // TTS 输出 24kHz (对齐 ESP32 I2S)
                         .format(SpeechSynthesisAudioFormat.WAV)
                         .build();
                 

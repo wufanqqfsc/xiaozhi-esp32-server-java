@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
+import com.xiaozhi.common.utils.LatencyTracer;
+
 import lombok.extern.slf4j.Slf4j;
 /**
  * 人物角色、虚拟形象，描述角色的属性和行为。Domain Entity: CharacterRole(聊天角色,Persona)，管理对话历史记录，管理对话工具调用等。
@@ -117,6 +119,8 @@ public class Persona {
      * @param useFunctionCall 是否使用函数调用
      */
     private Flux<ChatResponse> chatStream(Instant now, UserMessage userMessage, boolean useFunctionCall) {
+        LatencyTracer.setSession(sessionId);
+        LatencyTracer.start(sessionId, "LLM_FIRST_TOKEN");
         // userSpeechPath 从 session 中获取，避免参数层层穿透
         Path userSpeechPath = getSession().getUserAudioPath();
 
@@ -152,11 +156,13 @@ public class Persona {
         Flux<ChatResponse> chatFlux = chatModel.stream(prompt)
             .doOnError(error -> {
                 listener.onError(error);
-            });
+            })
+            .doOnComplete(() -> LatencyTracer.mark(sessionId, "LLM_DONE"));
         chatFlux = chatFlux.doOnNext(chatResponse -> {
             Instant assistantMessageCreatedAt = Instant.now();
             boolean isFirst = ttft.compareAndSet(null, assistantMessageCreatedAt);
             if (isFirst) {
+                LatencyTracer.mark(sessionId, "LLM_FIRST_TOKEN");
                 if (player.getOpusRecorder() != null) {
                     player.getOpusRecorder().setAssistantMessageCreatedAt(assistantMessageCreatedAt);
                 }

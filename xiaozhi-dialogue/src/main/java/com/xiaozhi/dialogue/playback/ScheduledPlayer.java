@@ -20,6 +20,8 @@ import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.xiaozhi.common.utils.LatencyTracer;
+
 import lombok.extern.slf4j.Slf4j;
 /**
  * 基于虚拟线程的音频流播放器。
@@ -42,7 +44,7 @@ public class ScheduledPlayer extends Player {
     private static final long OPUS_FRAME_SEND_INTERVAL_NS = AudioUtils.OPUS_FRAME_DURATION_MS * 1_000_000L;
 
     // Burst模式：前2帧预缓冲，避免首帧破音
-    private static final long BURST_PREBUFFER_NS = -OPUS_FRAME_SEND_INTERVAL_NS * 2; // -120ms
+    private static final long BURST_PREBUFFER_NS = -OPUS_FRAME_SEND_INTERVAL_NS * 1; // -60ms (优化: 原2帧预缓冲改为1帧, 降低首音延迟 60ms)
 
     // 等待所有音频在终端设备播放完成后再发送TTS结束消息
     private static final long WAIT_TIME_MS_TO_SEND_STOP = 120;
@@ -56,7 +58,10 @@ public class ScheduledPlayer extends Player {
 
     // Burst模式状态
     private long startTimestamp = 0;  // 播放开始的绝对时间戳（纳秒）
-    private long playPosition = BURST_PREBUFFER_NS;  // 当前播放位置（纳秒），初始为-120ms实现预缓冲
+    private long playPosition = BURST_PREBUFFER_NS;  // 当前播放位置（纳秒），初始为-60ms实现1帧预缓冲（链路优化：2帧→1帧，首音-60ms）
+
+    // 链路优化：首帧埋点标志（AtomicBoolean 保证线程安全）
+    private final java.util.concurrent.atomic.AtomicBoolean firstAudioSentFlag = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     // 音频帧队列
     private Queue<Speech> allOpusFrames = new ConcurrentLinkedQueue<>();
@@ -243,6 +248,7 @@ public class ScheduledPlayer extends Player {
                         // 重置Burst模式状态，避免下次play()时因旧的startTimestamp导致所有帧以零延迟发送
                         startTimestamp = 0;
                         playPosition = BURST_PREBUFFER_NS;
+                        firstAudioSentFlag.set(false);  // 重置首帧标志
                         sendStop();
                         break;
                     }
@@ -316,6 +322,11 @@ public class ScheduledPlayer extends Player {
         }
         // else: delay <= 0，立即发送（预缓冲阶段）
 
+        // 首帧埋点：端到端首音延迟（链路优化追踪点），CAS 确保仅触发一次
+        if (firstAudioSentFlag.compareAndSet(false, true)) {
+            LatencyTracer.mark(session.getSessionId(), "FIRST_AUDIO_SENT");
+        }
+
         // 发送音频帧
         sendOpusFrame(frame);
 
@@ -349,6 +360,7 @@ public class ScheduledPlayer extends Player {
         // 重置Burst模式状态
         startTimestamp = 0;
         playPosition = BURST_PREBUFFER_NS;
+        firstAudioSentFlag.set(false);  // 重置首帧标志
 
         // 中断时主动关闭文件，避免产生损坏的 Opus 文件
         if (getOpusRecorder() != null) {

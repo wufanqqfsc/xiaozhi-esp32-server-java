@@ -127,7 +127,7 @@ public class VolcengineTtsService implements TtsService {
             audio.addProperty("speed_ratio", getSpeed());
             audio.addProperty("volume_ratio", 1.0);
             audio.addProperty("pitch_ratio", getPitch());
-            audio.addProperty("rate", AudioUtils.SAMPLE_RATE);
+            audio.addProperty("rate", AudioUtils.TTS_OUTPUT_SAMPLE_RATE); // TTS 输出 24kHz (对齐 ESP32 I2S)
             requestJson.add("audio", audio);
 
             // request部分

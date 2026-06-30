@@ -18,6 +18,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.xiaozhi.common.utils.LatencyTracer;
+
 import lombok.extern.slf4j.Slf4j;
 /**
  * FunASR STT服务实现
@@ -51,6 +53,7 @@ public class FunASRSttService implements SttService {
 
     @Override
     public SttResult stream(Flux<byte[]> audioSink) {
+        LatencyTracer.start(LatencyTracer.currentSession(), "STT_RECV");
         // 使用阻塞队列存储音频数据
         BlockingQueue<byte[]> audioQueue = new LinkedBlockingQueue<>();
         AtomicBoolean isCompleted = new AtomicBoolean(false);
@@ -127,7 +130,10 @@ public class FunASRSttService implements SttService {
             public void onClose(int code, String reason, boolean remote) {
                 log.info("FunASR WS关闭，原因：{}", reason);
                 // 连接关闭时，离线修正结果已全部收到，设置最终结果
-                finalResult.set(offlineResult.toString());
+                synchronized (offlineResult) {
+                    finalResult.set(offlineResult.toString());
+                }
+                LatencyTracer.mark(LatencyTracer.currentSession(), "STT_DONE");
                 recognitionLatch.countDown();
             }
 
@@ -135,7 +141,10 @@ public class FunASRSttService implements SttService {
             public void onError(Exception ex) {
                 log.error("FunASR WS错误", ex);
                 // 先设置已有的结果，再释放锁，避免主线程读到空结果
-                finalResult.set(offlineResult.toString());
+                synchronized (offlineResult) {
+                    finalResult.set(offlineResult.toString());
+                }
+                LatencyTracer.mark(LatencyTracer.currentSession(), "STT_DONE");
                 recognitionLatch.countDown();
             }
         };
