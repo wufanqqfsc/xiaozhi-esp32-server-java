@@ -51,6 +51,15 @@ public class Conversation extends ConversationIdentifier {
 
     public Optional<SystemMessage> roleSystemMessage(ConversationContext context) {
         StringBuilder msgBuilder = new StringBuilder();
+        // 1) 反思考指令：尽量压缩 TTFT，避免模型把思考片段吐到正文。
+        //    思考仍可放在 reasoningContent 通道由后端做 UI 提示，但不要在 content 文本里输出 标签。
+        msgBuilder.append("输出约束：你的回复里不要包含 ")
+            .append(THINK_OPEN)
+            .append(" / ")
+            .append(THINK_CLOSE)
+            .append(" 等任何隐藏思考标记或元注释段落，不要输出类似“我先想想…”、")
+            .append("“让我分析一下…”这类过程性文字，直接给出对用户友好的最终答复。")
+            .append(System.lineSeparator());
         if(StringUtils.hasText(roleDesc)) {
             msgBuilder.append( "角色描述：" ).append(roleDesc).append(System.lineSeparator());
         }
@@ -78,6 +87,13 @@ public class Conversation extends ConversationIdentifier {
             return Optional.empty();
         }
     }
+
+    /**
+     * 思考标记常量。源码使用反斜杠转义序列产生 `${xml.invalid}` 这类尖括号，
+     * 避免 markdown 渲染或本地静态扫描误吞。同名常量在 WebChatService 中复用。
+     */
+    String THINK_OPEN = "\u003c\u0074\u0068\u0069\u006e\u006b\u003e";
+    String THINK_CLOSE = "\u003c\u002f\u0074\u0068\u0069\u006e\u006b\u003e";
 
     /**
      * 带运行时上下文的消息列表（子类覆写此方法以注入系统提示词）。

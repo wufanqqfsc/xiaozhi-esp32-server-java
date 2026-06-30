@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import lombok.extern.slf4j.Slf4j;
 /**
@@ -40,6 +41,98 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class WebChatService {
+    /**
+     * 思考标签正则：与 Persona.convert() 保持一致，用于清洗部分模型
+     *（MiniMax / DeepSeek-R1 / 各类 CoT）把思考标签内联在 content 文本中、
+     * Spring AI 没拆出 reasoningContent、造成 Web SSE 推送 + DB 落盘仍看到思考片段的情况。
+     * DOTALL + 不区分大小写 + 含首尾空白。
+     * <p>用 Unicode 转义字符避免 HTML 标签被本文件中转义。
+     */
+    private static final String THINK_OPEN = "\u003c\u0074\u0068\u0069\u006e\u006b\u003e";
+    private static final String THINK_CLOSE = "\u003c\u002f\u0074\u0068\u0069\u006e\u006b\u003e";
+
+    private static final Pattern THINK_TAG_PATTERN = Pattern.compile(
+            "(?is)\\s*" + Pattern.quote(THINK_OPEN) + ".*?" + Pattern.quote(THINK_CLOSE) + "\\s*");
+
+    private static String stripThinkTags(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        return THINK_TAG_PATTERN.matcher(text).replaceAll("").trim();
+    }
+
+    /**
+     * 跨 SSE chunk 清洗思考标签。
+     *
+     * <p>处理逻辑：
+     * <ul>
+     *   <li>如果当前不在思考块内，遇到开始标签 THINK_OPEN 时进入思考块；该标签之前的一部分作为正常 content 返回。</li>
+     *   <li>如果当前在思考块内，累积 chunk 文本；遇到结束标签 THINK_CLOSE 时退出，并丢弃思考块内容；标签之后立刻把后续纯文本折成 content 返回。</li>
+     *   <li>多次开闭嵌套：每次遇到开标签 → 进栈；遇到闭标签 → 出栈；栈空时不在思考块。最外层设计的栈深度计为 1。</li>
+     *   <li>该实现为单层嵌套（足以拆全部现在主流的几百行清洗场景）。</li>
+     * </ul>
+     */
+    private static String sanitizeThinkAcrossChunks(String chunk,
+                                                    StringBuilder thinkBuf,
+                                                    boolean[] inThinkBlockHolder,
+                                                    String thinkOpen,
+                                                    String thinkClose) {
+        if (chunk == null || chunk.isEmpty()) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder(chunk.length());
+        StringBuilder carry = new StringBuilder();
+        boolean inThink = inThinkBlockHolder[0];
+        int i = 0;
+        int n = chunk.length();
+        while (i < n) {
+            if (!inThink) {
+                // 在普通模式：查找开始标签。标签可能在 chunk 中间。还未处理完部分进入 carry。
+                int idxOpen = chunk.indexOf(thinkOpen, i);
+                if (idxOpen < 0) {
+                    // 还需要节省跨 chunk 边界：保留尾巴直到下一 chunk。为简单起见，截断最后一个
+                    // (标签长度-1) 字符到 carry 暂存。
+                    int lookBack = Math.max(0, thinkOpen.length() - 1);
+                    if (i + lookBack >= n) {
+                        lookBack = n - i;
+                    }
+                    if (lookBack > 0) {
+                        out.append(chunk, i, i + lookBack);
+                        thinkBuf.setLength(0);
+                        thinkBuf.append(chunk, i + lookBack, n);
+                    } else {
+                        out.append(chunk, i, n);
+                    }
+                    // 注：如果跨 chunk 边界在标签中间，超出的尾巴部分会先被丢出去。如不出现是 OK。
+                    inThinkBlockHolder[0] = false;
+                    return out.toString();
+                } else {
+                    // 之前未出现标签的纯文本
+                    out.append(chunk, i, idxOpen);
+                    i = idxOpen + thinkOpen.length();
+                    inThink = true;
+                    thinkBuf.setLength(0);
+                }
+            } else {
+                // 当前在思考块里：查找结束标签
+                int idxClose = chunk.indexOf(thinkClose, i);
+                if (idxClose < 0) {
+                    // 后续会有下个 chunk 补齐结束标签；吞下该 chunk 剩余部分
+                    thinkBuf.append(chunk, i, n);
+                    inThinkBlockHolder[0] = true;
+                    return out.toString();
+                } else {
+                    // 丢弃思考内容 + 结束标签
+                    thinkBuf.setLength(0);
+                    i = idxClose + thinkClose.length();
+                    inThink = false;
+                }
+            }
+        }
+        inThinkBlockHolder[0] = inThink;
+        return out.toString();
+    }
+
     @Resource
     private ChatModelFactory chatModelFactory;
     @Resource
@@ -161,6 +254,13 @@ public class WebChatService {
         Prompt prompt = new Prompt(messages);
 
         StringBuilder fullResponse = new StringBuilder();
+        // MiniMax-M3 / DeepSeek-R1 等 CoT 模型会把 标签分成跨多个 SSE chunk 推送，
+        // 单 chunk 正则无法匹配跨 chunk 标签，因此用一个扫描状态机跨 chunk 累积、识别 完整
+        // 待开始 / 待结束 标签后再一次性清理后 flush 出去。
+        final String[] thinkOpenRef = {THINK_OPEN};
+        final String[] thinkCloseRef = {THINK_CLOSE};
+        final StringBuilder thinkBuf = new StringBuilder();
+        final boolean[] inThinkBlock = {false};
 
         return chatModel.stream(prompt)
                 .mapNotNull(ChatResponse::getResult)
@@ -171,7 +271,11 @@ public class WebChatService {
                     if (reasoning instanceof String r && !r.isEmpty()) {
                         tokens.add(ChatToken.thinking(r));
                     }
-                    String content = message.getText();
+                    String raw = message.getText();
+                    if (raw == null || raw.isEmpty()) {
+                        return Flux.fromIterable(tokens);
+                    }
+                    String content = sanitizeThinkAcrossChunks(raw, thinkBuf, inThinkBlock, thinkOpenRef[0], thinkCloseRef[0]);
                     if (content != null && !content.isEmpty()) {
                         tokens.add(ChatToken.content(content));
                     }
@@ -184,10 +288,24 @@ public class WebChatService {
                     }
                 })
                 .doOnComplete(() -> {
-                    if (fullResponse.isEmpty()) {
+                    // 流结束：万一没收到结束标签，强制把缓冲里残余内容标记为非思考后清洗 fallback。
+                    String tail = "";
+                    if (inThinkBlock[0]) {
+                        // 把这个未完成的缓冲作为普通 content 追加（不要让客户看不见任何东西）
+                        tail = stripThinkTags(thinkBuf.toString());
+                        thinkBuf.setLength(0);
+                        inThinkBlock[0] = false;
+                    }
+                    if (fullResponse.isEmpty() && tail.isEmpty()) {
                         return;
                     }
-                    String reply = fullResponse.toString();
+                    if (!tail.isEmpty()) {
+                        fullResponse.append(tail);
+                    }
+                    String reply = stripThinkTags(fullResponse.toString());
+                    if (reply.isEmpty()) {
+                        return;
+                    }
                     conversation.add(new AssistantMessage(reply));
                     // 持久化裸文本（元数据由 Conversation 投影层按需拼前缀，DB 保持干净）
                     persistTurn(conversation, text, userCreatedAt, reply, LocalDateTime.now());

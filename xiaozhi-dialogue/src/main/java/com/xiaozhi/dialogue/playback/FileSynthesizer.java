@@ -11,6 +11,7 @@ import reactor.core.publisher.Flux;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import lombok.extern.slf4j.Slf4j;
 /**
@@ -21,6 +22,15 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class FileSynthesizer extends Synthesizer {
+
+    /**
+     * 思考标签正则：用于在分句后、送 TTS 之前的兜底清洗。
+     * 覆盖 Persona.convert() 已过滤的场景之外的边界情况（如标签变体、
+     * 部分模型在工具调用或系统提示中内联 <think> 等）。
+     * DOTALL + 不区分大小写 + 含首尾空白，避免 TTS 把"让我想想..."念出来。
+     */
+    private static final Pattern THINK_TAG_PATTERN =
+            Pattern.compile("(?is)\\s*<think>.*?</think>\\s*");
 
     // 保存LLM输出流的订阅引用，以便在cancel时取消上游订阅
     private volatile Disposable llmDisposable;
@@ -50,8 +60,17 @@ public class FileSynthesizer extends Synthesizer {
     @Override
     public void synthesize(Flux<String> stringFlux) {
         llmDisposable = new SentenceHelper().convert(stringFlux).subscribe(result -> {
-            String text = result.text();
+            String rawText = result.text();
             String mood = result.mood();
+            // TTS 兜底：去除 <think>...</think> 标签，避免把思考过程念成语音
+            if (rawText != null) {
+                rawText = THINK_TAG_PATTERN.matcher(rawText).replaceAll("").trim();
+            }
+            if (rawText == null || rawText.isEmpty()) {
+                log.debug("句子在清洗 think 标签后为空，跳过 TTS - SessionId: {}", chatSession.getSessionId());
+                return;
+            }
+            final String text = rawText;
             Flux<Speech> lazyTtsFlux = Flux.create(sink -> {
                 try {
                     Path audioPath = ttsService.textToSpeech(text);
@@ -80,6 +99,14 @@ public class FileSynthesizer extends Synthesizer {
      */
     @Override
     public void synthesize(String text) {
+        // TTS 兜底：去除 <think>...</think> 标签（针对非流式路径）
+        if (text != null) {
+            text = THINK_TAG_PATTERN.matcher(text).replaceAll("").trim();
+        }
+        if (text == null || text.isEmpty()) {
+            log.debug("文本在清洗 think 标签后为空，跳过 TTS - SessionId: {}", chatSession.getSessionId());
+            return;
+        }
         // 委托给 synthesize(Flux) 处理，缓存指标在那里统一记录
         synthesize(Flux.just(text));
     }
