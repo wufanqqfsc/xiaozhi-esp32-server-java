@@ -402,6 +402,28 @@ export default {
     allMemory: 'All Memory',
   },
 
+  // Bluetooth related
+  bluetooth: {
+    bluetoothConnection: 'Bluetooth Connection',
+    device: 'Device',
+    status: 'Status',
+    online: 'Online',
+    bleEnabled: 'Bluetooth Enabled',
+    statusCode: 'Status Code',
+    connected: 'Connected',
+    advertising: 'Advertising',
+    disabled: 'Disabled',
+    paused: 'Paused',
+    notSupported: 'Not Supported',
+    offline: 'Device Offline',
+    noIp: 'No Device IP',
+    unknown: 'Unknown Status',
+    tips: 'Tips',
+    notSupportedTip: 'Current firmware does not support Bluetooth. You need to enable CONFIG_XIAOZHI_ENABLE_BLE_FISHEYE in ESP-IDF and recompile.',
+    offlineTip: 'Device is offline. Please ensure the device is connected to WiFi and working properly.',
+    notEnabledTip: 'Bluetooth is not enabled. The firmware may not have Bluetooth support configured correctly.',
+  },
+
   role: {
     // Role basic information
     roleName: 'Role Name',

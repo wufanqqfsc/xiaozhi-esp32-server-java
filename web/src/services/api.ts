@@ -23,6 +23,7 @@ export default {
     update: '/device',
     delete: '/device',
     export: '/device/export',
+    bluetooth: '/device',  // 蓝牙状态: /device/{deviceId}/bluetooth
   },
   agent: {
     query: '/agent',

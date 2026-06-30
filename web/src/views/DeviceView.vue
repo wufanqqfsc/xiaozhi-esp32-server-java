@@ -10,6 +10,7 @@ import { queryDevices, addDevice, updateDevice, deleteDevice, clearDeviceMemory 
 import { queryRoles } from '@/services/role'
 import DeviceEditDialog from '@/components/DeviceEditDialog.vue'
 import TableActionButtons from '@/components/TableActionButtons.vue'
+import BluetoothStatusModal from '@/components/BluetoothStatusModal.vue'
 import type { Device, DeviceQueryParams, Role } from '@/types/device'
 import type { TablePaginationConfig } from 'ant-design-vue'
 
@@ -89,6 +90,10 @@ const {
 const editVisible = ref(false)
 const currentDevice = ref<Device | null>(null)
 const clearMemoryLoading = ref(false)
+
+// 蓝牙状态弹窗
+const bluetoothModalVisible = ref(false)
+const bluetoothDevice = ref<Device | null>(null)
 
 // 添加设备输入框
 const addDeviceCode = ref('')
@@ -311,6 +316,14 @@ async function handleClearMemory(device: Device) {
     clearMemoryLoading.value = false
     loadingStore.hideLoading()
   }
+}
+
+/**
+ * 打开蓝牙连接弹窗
+ */
+function handleOpenBluetooth(record: Device) {
+  bluetoothDevice.value = record
+  bluetoothModalVisible.value = true
 }
 
 /**
@@ -561,6 +574,11 @@ fetchData()
               @delete="() => handleDeleteDevice(record)"
             >
               <template #actions>
+                <!-- 蓝牙连接按钮 -->
+                <a @click="() => handleOpenBluetooth(record)">
+                  {{ t('bluetooth.bluetoothConnection') }}
+                </a>
+                <!-- 设备记忆按钮 -->
                 <a
                   v-permission="'system:device:memory'"
                   @click="() => navigateToMemory({ roleId: record.roleId, deviceId: record.deviceId })"
@@ -583,6 +601,15 @@ fetchData()
       @close="editVisible = false"
       @submit="handleUpdate"
       @clear-memory="handleClearMemory"
+    />
+
+    <!-- 蓝牙状态弹窗 -->
+    <BluetoothStatusModal
+      :visible="bluetoothModalVisible"
+      :device-id="bluetoothDevice?.deviceId || ''"
+      :device-name="bluetoothDevice?.deviceName || ''"
+      @update:visible="bluetoothModalVisible = $event"
+      @close="bluetoothModalVisible = false"
     />
 
     <!-- 回到顶部 -->

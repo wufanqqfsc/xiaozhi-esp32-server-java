@@ -192,6 +192,109 @@ public class DeviceAppService {
     }
 
     /**
+     * 获取设备蓝牙状态。
+     * 通过 HTTP API 查询 ESP32 设备的 BLE 状态。
+     *
+     * @param deviceId 设备ID
+     * @return 蓝牙状态信息
+     */
+    public Map<String, Object> getBluetoothStatus(String deviceId) {
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("设备不存在"));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("deviceId", deviceId);
+
+        // 检查设备是否在线
+        String deviceState = device.getState();
+        if (!"1".equals(deviceState)) {
+            result.put("online", false);
+            result.put("bleEnabled", false);
+            result.put("bleStatus", 0);
+            result.put("bleStatusText", "offline");
+            result.put("message", "设备离线，无法查询蓝牙状态");
+            return result;
+        }
+
+        // 获取设备IP
+        String ip = device.getIp();
+        if (!StringUtils.hasText(ip)) {
+            result.put("online", true);
+            result.put("bleEnabled", false);
+            result.put("bleStatus", 0);
+            result.put("bleStatusText", "no_ip");
+            result.put("message", "设备IP未知");
+            return result;
+        }
+
+        // 查询设备蓝牙状态
+        try {
+            String url = "http://" + ip + ":8080/api/ble/status";
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection)
+                    new java.net.URL(url).openConnection();
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
+            conn.setRequestMethod("GET");
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(conn.getInputStream()))) {
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
+                    // 解析JSON响应
+                    com.fasterxml.jackson.databind.ObjectMapper mapper =
+                            new com.fasterxml.jackson.databind.ObjectMapper();
+                    Map<String, Object> bleData = mapper.readValue(
+                            response.toString(), Map.class);
+                    result.put("online", true);
+                    result.put("bleEnabled", bleData.get("ble_enabled"));
+                    result.put("blePaused", bleData.get("ble_paused"));
+                    result.put("bleStatus", bleData.get("ble_status"));
+                    result.put("bleStatusText", bleData.get("ble_status_text"));
+                    result.put("message", getBleStatusMessage(
+                            bleData.get("ble_status_text") != null ?
+                                    bleData.get("ble_status_text").toString() : "disabled"));
+                    return result;
+                }
+            } else {
+                result.put("online", true);
+                result.put("bleEnabled", false);
+                result.put("bleStatus", 0);
+                result.put("bleStatusText", "api_error");
+                result.put("message", "蓝牙API返回错误: " + responseCode);
+                return result;
+            }
+        } catch (Exception e) {
+            log.warn("查询设备蓝牙状态失败: deviceId={}, ip={}, error={}",
+                    deviceId, ip, e.getMessage());
+            result.put("online", false);
+            result.put("bleEnabled", false);
+            result.put("bleStatus", 0);
+            result.put("bleStatusText", "connection_error");
+            result.put("message", "连接设备失败: " + e.getMessage());
+            return result;
+        }
+    }
+
+    /**
+     * 获取蓝牙状态的中文描述
+     */
+    private String getBleStatusMessage(String status) {
+        return switch (status) {
+            case "advertising" -> "蓝牙已开启，正在广播，可被手机发现并连接";
+            case "connected" -> "蓝牙已连接，手机已成功配对";
+            case "disabled" -> "蓝牙未启用";
+            case "not_supported" -> "当前固件不支持蓝牙功能";
+            case "paused" -> "蓝牙已暂停，设备正在配网模式中";
+            default -> "未知状态";
+        };
+    }
+
+    /**
      * 处理 OTA 请求的核心业务逻辑。
      *
      * @param req 由 Controller 从 HTTP 请求解析出的设备信息

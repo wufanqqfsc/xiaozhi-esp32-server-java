@@ -119,6 +119,19 @@ public class DeviceController extends BaseController {
         return ApiResponse.success("删除成功");
     }
 
+    /**
+     * 获取设备蓝牙状态
+     */
+    @GetMapping("/{deviceId}/bluetooth")
+    @ResponseBody
+    @SaCheckPermission("system:device:api:list")
+    @CheckOwner(resource = "device", id = "#deviceId")
+    @Operation(summary = "获取设备蓝牙状态", description = "查询 ESP32 设备的 BLE 蓝牙状态")
+    public ApiResponse<?> getBluetoothStatus(@PathVariable String deviceId) {
+        Map<String, Object> bleStatus = deviceAppService.getBluetoothStatus(deviceId);
+        return ApiResponse.success(bleStatus);
+    }
+
     @SaIgnore
     @RequestMapping(value = "/ota", method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody

@@ -36,3 +36,10 @@ export function deleteDevice(deviceId: string) {
 export function clearDeviceMemory(deviceId: string) {
   return http.delete(api.message.delete, { deviceId })
 }
+
+/**
+ * 获取设备蓝牙状态
+ */
+export function getBluetoothStatus(deviceId: string) {
+  return http.get(`${api.device.bluetooth}/${deviceId}/bluetooth`)
+}

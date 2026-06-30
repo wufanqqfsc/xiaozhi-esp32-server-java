@@ -402,6 +402,28 @@ export default {
     allMemory: '全部记忆',
   },
 
+  // 蓝牙相关
+  bluetooth: {
+    bluetoothConnection: '蓝牙连接',
+    device: '设备',
+    status: '状态',
+    online: '在线状态',
+    bleEnabled: '蓝牙启用',
+    statusCode: '状态码',
+    connected: '已连接',
+    advertising: '广播中',
+    disabled: '未启用',
+    paused: '已暂停',
+    notSupported: '不支持',
+    offline: '设备离线',
+    noIp: '无设备IP',
+    unknown: '未知状态',
+    tips: '操作提示',
+    notSupportedTip: '当前固件不支持蓝牙功能，需要在 ESP-IDF 中启用 CONFIG_XIAOZHI_ENABLE_BLE_FISHEYE 配置项并重新编译烧录。',
+    offlineTip: '设备已离线，请确保设备已连接 WiFi 且正常工作。',
+    notEnabledTip: '蓝牙功能未启用，固件可能未正确配置蓝牙支持。',
+  },
+
   role: {
     // 角色基本信息
     roleName: '角色名称',

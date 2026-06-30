@@ -68,4 +68,17 @@ export interface Role {
   updateTime?: string
 }
 
+/**
+ * 蓝牙状态接口
+ */
+export interface BluetoothStatus {
+  deviceId: string
+  online: boolean
+  bleEnabled: boolean
+  blePaused?: boolean
+  bleStatus: number  // 0=disabled, 1=advertising, 2=connected
+  bleStatusText: string
+  message: string
+}
+
 
