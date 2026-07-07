@@ -3,7 +3,7 @@
  * 统一管理会话状态、消息流、历史记录
  */
 
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, onBeforeUnmount, nextTick } from 'vue'
 import { message as antMessage } from 'ant-design-vue'
 import { openChatSession, closeChatSession, chatStream } from '@/services/chat'
 import { queryConversations, queryMessages } from '@/services/message'
@@ -84,6 +84,7 @@ export function useChatSession() {
         role: m.sender === 'user' ? 'user' : 'assistant',
         content: m.message,
         timestamp: m.createTime ? new Date(m.createTime) : new Date(),
+        displayed: true,
       }))
 
       messages.value = historyMsgs
@@ -157,24 +158,32 @@ export function useChatSession() {
     }
 
     // 添加用户消息
-    messages.value.push({
+    const userMsg: ChatMessage = {
       id: ++messageIdCounter.value,
       role: 'user',
       content: text,
       timestamp: new Date(),
+      displayed: false,
+    }
+    messages.value.push(userMsg)
+    nextTick(() => {
+      userMsg.displayed = true
     })
     onScroll?.()
 
     // 添加 AI 占位消息
-    messages.value.push({
+    const assistantMsg: ChatMessage = {
       id: ++messageIdCounter.value,
       role: 'assistant',
       content: '',
       timestamp: new Date(),
       streaming: true,
+      displayed: false,
+    }
+    messages.value.push(assistantMsg)
+    nextTick(() => {
+      assistantMsg.displayed = true
     })
-    // 从响应式数组中获取代理对象，确保后续修改能触发视图更新
-    const assistantMsg = messages.value[messages.value.length - 1]!
     onScroll?.()
 
     sending.value = true

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, computed, watch } from 'vue'
+import { ref, nextTick, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   ArrowUpOutlined,
@@ -58,6 +58,10 @@ watch(roles, (newRoles) => {
 
 // UI 状态：历史记录抽屉
 const showHistory = ref(false)
+const ripples = ref<{ id: number; x: number; y: number }[]>([])
+let rippleId = 0
+const canvasRef = ref<HTMLCanvasElement>()
+let particlesAnimationId: number | null = null
 
 function toggleHistory() {
   showHistory.value = !showHistory.value
@@ -142,6 +146,97 @@ function handleKeyDown(e: KeyboardEvent) {
     sendMessage()
   }
 }
+
+function createRipple(e: MouseEvent) {
+  const btn = e.currentTarget as HTMLElement
+  const rect = btn.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  const id = rippleId++
+  ripples.value.push({ id, x, y })
+  setTimeout(() => {
+    ripples.value = ripples.value.filter(r => r.id !== id)
+  }, 600)
+}
+
+interface Particle {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  size: number
+  opacity: number
+}
+
+function initParticles() {
+  const canvas = canvasRef.value
+  if (!canvas) return
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const rect = canvas.getBoundingClientRect()
+  canvas.width = rect.width
+  canvas.height = rect.height
+
+  const particles: Particle[] = []
+  const particleCount = Math.floor((rect.width * rect.height) / 15000)
+
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      size: Math.random() * 2 + 0.5,
+      opacity: Math.random() * 0.3 + 0.1,
+    })
+  }
+
+  const animate = () => {
+    const currentCanvas = canvasRef.value
+    const currentCtx = currentCanvas?.getContext('2d')
+    if (!currentCanvas || !currentCtx) return
+
+    currentCtx.clearRect(0, 0, currentCanvas.width, currentCanvas.height)
+
+    particles.forEach(particle => {
+      particle.x += particle.vx
+      particle.y += particle.vy
+
+      if (particle.x < 0) particle.x = currentCanvas.width
+      if (particle.x > currentCanvas.width) particle.x = 0
+      if (particle.y < 0) particle.y = currentCanvas.height
+      if (particle.y > currentCanvas.height) particle.y = 0
+
+      currentCtx.beginPath()
+      currentCtx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
+      currentCtx.fillStyle = `rgba(114, 46, 209, ${particle.opacity})`
+      currentCtx.fill()
+    })
+
+    particlesAnimationId = requestAnimationFrame(animate)
+  }
+
+  animate()
+}
+
+function cleanupParticles() {
+  if (particlesAnimationId) {
+    cancelAnimationFrame(particlesAnimationId)
+    particlesAnimationId = null
+  }
+}
+
+onMounted(() => {
+  nextTick(() => {
+    initParticles()
+  })
+})
+
+onUnmounted(() => {
+  cleanupParticles()
+})
 </script>
 
 <template>
@@ -203,18 +298,19 @@ function handleKeyDown(e: KeyboardEvent) {
     <a-layout-content class="chat-content" :style="{ paddingRight: showHistory ? '320px' : '0' }">
       <!-- 消息列表 -->
       <div class="chat-messages" ref="chatContainerRef">
+        <canvas ref="canvasRef" class="particles-canvas"></canvas>
         <div class="chat-messages-inner">
           <div v-if="messages.length === 0" :style="{ margin: 'auto', textAlign: 'center', color: '#8c8c8c' }">
             <h2 :style="{ marginBottom: '8px', color: '#1f2329' }">{{ t('chat.greeting', { name: selectedRoleName || t('chat.defaultAssistant') }) }}</h2>
             <span>{{ t('chat.emptyHint') }}</span>
           </div>
 
-          <div v-for="msg in messages" :key="msg.id" class="message-row" :class="msg.role">
+          <div v-for="msg in messages" :key="msg.id" class="message-row" :class="[msg.role, { displayed: msg.displayed }]">
             <a-avatar v-if="msg.role === 'user'" :size="36" :style="{ background: '#1677ff', flexShrink: 0 }">
               <template #icon><UserOutlined /></template>
             </a-avatar>
-            <a-avatar v-else-if="selectedRoleAvatar" :size="36" :src="selectedRoleAvatar" :style="{ flexShrink: 0 }" />
-            <RobotAvatar v-else :size="36" />
+            <a-avatar v-else-if="selectedRoleAvatar" :size="36" :src="selectedRoleAvatar" :style="{ flexShrink: 0 }" :class="{ breathing: msg.streaming }" />
+            <RobotAvatar v-else :size="36" :class="{ breathing: msg.streaming }" />
             <div class="message-content" :class="msg.role">
               <a-typography-text type="secondary" :style="{ fontSize: '13px', padding: '0 4px', marginBottom: '4px' }">
                 {{ msg.role === 'user' ? t('chat.me') : (selectedRoleName || t('chat.defaultAssistant')) }}
@@ -231,7 +327,8 @@ function handleKeyDown(e: KeyboardEvent) {
                     :expanded="thinkingExpanded[msg.id]"
                     @toggle="toggleThinking(msg.id)"
                   />
-                  <template v-if="msg.content">{{ msg.content }}</template>
+                  <span v-if="msg.content">{{ msg.content }}</span>
+                  <span v-if="msg.streaming && msg.content" class="typing-cursor">|</span>
                 </template>
               </div>
             </div>
@@ -256,10 +353,17 @@ function handleKeyDown(e: KeyboardEvent) {
               :disabled="!selectedRoleId || !inputText.trim() || sending"
               :loading="sending"
               @click="sendMessage"
+              @mousedown="createRipple"
               shape="circle"
               class="send-btn"
             >
               <template #icon><ArrowUpOutlined /></template>
+              <span
+                v-for="ripple in ripples"
+                :key="ripple.id"
+                class="ripple"
+                :style="{ left: ripple.x + 'px', top: ripple.y + 'px' }"
+              ></span>
             </a-button>
           </a-flex>
         </a-card>
@@ -432,6 +536,17 @@ function handleKeyDown(e: KeyboardEvent) {
   overflow-y: auto;
   padding: 24px;
   scroll-behavior: smooth;
+  position: relative;
+}
+
+.particles-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .chat-messages-inner {
@@ -440,6 +555,8 @@ function handleKeyDown(e: KeyboardEvent) {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 /* 消息气泡（无 AntD 等效组件，保留自定义） */
@@ -447,10 +564,23 @@ function handleKeyDown(e: KeyboardEvent) {
   display: flex;
   gap: 16px;
   margin-bottom: 24px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .message-row.user {
   flex-direction: row-reverse;
+  transform: translateX(20px);
+}
+
+.message-row.assistant {
+  transform: translateX(-20px);
+}
+
+.message-row.displayed {
+  opacity: 1;
+  transform: translateY(0) translateX(0);
 }
 
 .message-content {
@@ -470,6 +600,7 @@ function handleKeyDown(e: KeyboardEvent) {
   line-height: 1.6;
   word-break: break-word;
   white-space: pre-wrap;
+  position: relative;
 }
 
 .message-bubble.user {
@@ -511,6 +642,28 @@ function handleKeyDown(e: KeyboardEvent) {
   30% { opacity: 1; transform: scale(1); }
 }
 
+.typing-cursor {
+  display: inline-block;
+  animation: blink 1s infinite;
+  font-weight: bold;
+  color: #8c8c8c;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+:deep(.ant-avatar.breathing) {
+  animation: breathing 2s ease-in-out infinite;
+}
+
+@keyframes breathing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(114, 46, 209, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(114, 46, 209, 0); }
+}
+
 /* 输入区域 */
 .chat-input-wrapper {
   max-width: 880px;
@@ -534,6 +687,24 @@ function handleKeyDown(e: KeyboardEvent) {
   width: 36px;
   height: 36px;
   font-size: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple-effect 0.6s ease-out;
+  pointer-events: none;
+}
+
+@keyframes ripple-effect {
+  to {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
 }
 
 /* 历史记录时间线 */

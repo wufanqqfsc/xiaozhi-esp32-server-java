@@ -24,4 +24,6 @@ export interface ChatMessage {
   timestamp: Date
   /** 流式接收中 */
   streaming?: boolean
+  /** 是否已显示（用于入场动画） */
+  displayed?: boolean
 }
