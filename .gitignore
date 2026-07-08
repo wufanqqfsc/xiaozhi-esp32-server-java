@@ -41,3 +41,6 @@ CLAUDE.md
 
 # FunASR 运行时资源（模型文件）
 funasr-runtime-resources/
+
+# TRAE IDE 相关文件
+.trae/
