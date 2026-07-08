@@ -127,6 +127,12 @@ const columns = computed(() => [
     align: 'center'
   },
   {
+    title: t('device.ip'),
+    dataIndex: 'ip',
+    width: 120,
+    align: 'center'
+  },
+  {
     title: t('device.location'),
     dataIndex: 'location',
     width: 180,
@@ -517,6 +523,13 @@ fetchData()
           <template v-else-if="column.dataIndex === 'wifiName'">
             <a-tooltip :title="record.wifiName" placement="top">
               <span class="ellipsis-text">{{ record.wifiName || '-' }}</span>
+            </a-tooltip>
+          </template>
+
+          <!-- IP地址列 -->
+          <template v-else-if="column.dataIndex === 'ip'">
+            <a-tooltip :title="record.ip" placement="top">
+              <span class="ellipsis-text">{{ record.ip || '-' }}</span>
             </a-tooltip>
           </template>
 

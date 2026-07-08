@@ -351,6 +351,7 @@ export default {
     lastOnlineTime: 'Last Online Time',
     owner: 'Owner',
     wifiName: 'WIFI Name',
+    ip: 'IP Address',
     location: 'Location',
     productType: 'Product Type',
     addDevice: 'Add Device',

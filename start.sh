@@ -386,6 +386,12 @@ start_backend() {
   start_service "$DIALOGUE_NAME" "$DIALOGUE_MODULE" "$DIALOGUE_PORT"
   wait_port 127.0.0.1 "$SERVER_PORT"   "$SERVER_NAME"   60 || true
   wait_port 127.0.0.1 "$DIALOGUE_PORT" "$DIALOGUE_NAME" 60 || true
+
+  # 启动后在控制台实时输出 dialogue 日志
+  info "正在监听 dialogue 日志输出..."
+  tail -f "$LOGS_DIR/$DIALOGUE_NAME.log" &
+  local tail_pid=$!
+  write_pid "dialogue-log-tail" "$tail_pid"
 }
 
 stop_service() {
@@ -414,6 +420,13 @@ stop_service() {
 }
 
 stop_backend() {
+  # 先停止日志 tail 进程
+  if pid_alive "dialogue-log-tail"; then
+    local tail_pid
+    tail_pid="$(cat "$RUN_DIR/dialogue-log-tail.pid")"
+    kill "$tail_pid" 2>/dev/null || true
+    rm -f "$RUN_DIR/dialogue-log-tail.pid"
+  fi
   stop_service "$SERVER_NAME"
   stop_service "$DIALOGUE_NAME"
 }

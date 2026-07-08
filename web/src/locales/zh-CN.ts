@@ -351,6 +351,7 @@ export default {
     lastOnlineTime: '最后在线时间',
     owner: '所有者',
     wifiName: 'WIFI名称',
+    ip: 'IP地址',
     location: '地理位置',
     productType: '产品类型',
     addDevice: '添加设备',
