@@ -61,6 +61,12 @@ public class WebSocketHandler extends AbstractWebSocketHandler {
         ChatSession chatSession = sessionManager.getSession(sessionId);
         DeviceBO device = chatSession != null ? chatSession.getDevice() : null;
         String payload = message.getPayload();
+        if (log.isDebugEnabled()) {
+            String preview = payload == null ? "null"
+                    : (payload.length() > 200 ? payload.substring(0, 200) + "..." : payload);
+            log.debug("WS IN  TEXT sessionId={} size={} payload={}",
+                    sessionId, payload == null ? 0 : payload.length(), preview);
+        }
 
         try {
             var msg = JsonUtil.fromJson(payload, Message.class);
@@ -95,6 +101,9 @@ public class WebSocketHandler extends AbstractWebSocketHandler {
         ChatSession chatSession = sessionManager.getSession(sessionId);
         if (chatSession == null || chatSession.getDevice() == null) {
             return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("WS IN  BIN  sessionId={} size={}", sessionId, message.getPayloadLength());
         }
         messageHandler.handleBinaryMessage(sessionId, message.getPayload().array());
     }

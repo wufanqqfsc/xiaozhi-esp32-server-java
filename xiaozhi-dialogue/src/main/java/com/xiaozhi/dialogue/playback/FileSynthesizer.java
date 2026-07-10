@@ -61,6 +61,8 @@ public class FileSynthesizer extends Synthesizer {
      */
     @Override
     public void synthesize(Flux<String> stringFlux) {
+        // 每轮合成前重置该阶段计时，避免后续 mark 出现 ORPHAN。
+        LatencyTracer.start(chatSession.getSessionId(), "TTS_FIRST_CHUNK");
         llmDisposable = new SentenceHelper().convert(stringFlux).subscribe(result -> {
             String rawText = result.text();
             String mood = result.mood();
@@ -83,6 +85,7 @@ public class FileSynthesizer extends Synthesizer {
                             sink.next(first ? new Speech(chunk, text).withMood(mood) : new Speech(chunk));
                             first = false;
                         }
+                        // 首个有效 TTS 音频块出队时打点。
                         LatencyTracer.mark(chatSession.getSessionId(), "TTS_FIRST_CHUNK");
                     } else {
                         log.error("TTS服务返回空音频文件 - SessionId: {}", chatSession.getSessionId());
