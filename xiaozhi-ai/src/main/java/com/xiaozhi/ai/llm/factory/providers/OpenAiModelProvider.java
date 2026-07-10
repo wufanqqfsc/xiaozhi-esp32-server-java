@@ -122,7 +122,7 @@ public class OpenAiModelProvider implements ChatModelProvider {
         }
 
         if (isMiniMax) {
-            log.info("OpenAI model {} endpoint {} 已注入 thinking={{type:disabled}}", model, endpoint);
+            log.info("OpenAI model {} endpoint {} 已注入 thinking={{type:disabled}} 和 reasoning_split=true", model, endpoint);
         }
 
         var openAiChatOptions = chatOptionsBuilder.build();
@@ -182,10 +182,14 @@ public class OpenAiModelProvider implements ChatModelProvider {
     }
 
     /**
-     * 同步 JSON body 注入 thinking:disabled。
-     * 如果 body 不是合法 JSON object 或已存在 thinking 字段，原样返回。
+     * 同步 JSON body 注入 MiniMax thinking 控制参数。
+     * <ul>
+     *   <li>thinking: {type: "disabled"} - 尝试禁用thinking（M2.x模型无法关闭）</li>
+     *   <li>reasoning_split: true - 确保thinking通过reasoning_content返回，而非留在<think>...</think>标签内</li>
+     * </ul>
+     * 如果 body 不是合法 JSON object，原样返回。
      */
-    private static byte[] injectThinkingDisabled(byte[] body) {
+    private static byte[] injectMiniMaxThinkingParams(byte[] body) {
         if (body == null || body.length == 0) {
             return body;
         }
@@ -200,11 +204,12 @@ public class OpenAiModelProvider implements ChatModelProvider {
             ObjectNode thinking = OBJECT_MAPPER.createObjectNode();
             thinking.put("type", "disabled");
             obj.set("thinking", thinking);
+            obj.put("reasoning_split", true);
             byte[] mutated = OBJECT_MAPPER.writeValueAsBytes(obj);
-            log.debug("MiniMax 请求体已注入 thinking:disabled，原大小={} 字节，新大小={} 字节", body.length, mutated.length);
+            log.debug("MiniMax 请求体已注入 thinking={{type:disabled}} 和 reasoning_split=true，原大小={} 字节，新大小={} 字节", body.length, mutated.length);
             return mutated;
         } catch (Exception e) {
-            log.warn("注入 thinking:disabled 失败，跳过: {}", e.getMessage());
+            log.warn("注入 MiniMax thinking 参数失败，跳过: {}", e.getMessage());
             return body;
         }
     }
@@ -214,7 +219,7 @@ public class OpenAiModelProvider implements ChatModelProvider {
      */
     private static ClientHttpRequestInterceptor miniMaxThinkingInterceptor() {
         return (request, body, execution) -> {
-            byte[] mutated = injectThinkingDisabled(body);
+            byte[] mutated = injectMiniMaxThinkingParams(body);
             return execution.execute(request, mutated);
         };
     }

@@ -10,59 +10,78 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * 句子处理帮助类，统一分句逻辑。
- * 有状态的实例，不要复用，用完就丢弃。
- *
- * 提供两种使用方式：
- * 1. 响应式：convert(Flux<String>) → Flux<String>，供 FileSynthesizer 使用
- * 2. 命令式：take(String token) / take()，供 TTS Provider 内部 WebSocket 订阅使用
- */
 public class SentenceHelper implements ChatConverter {
 
-    /**
-     * 分句结果，包含去除表情符号后的纯文本和提取的情绪词。
-     */
     public record SentenceResult(String text, String mood) {}
-    // 句子结束标点符号模式（中英文句号、感叹号、问号）
+
     private static final Pattern SENTENCE_END_PATTERN = Pattern.compile("[。！？!?]");
 
-    // 逗号、分号等停顿标点
     private static final Pattern PAUSE_PATTERN = Pattern.compile("[，、；,;]");
 
-    // 冒号和引号等特殊标点
     private static final Pattern SPECIAL_PATTERN = Pattern.compile("[：:\"]");
 
-    // 换行符
     private static final Pattern NEWLINE_PATTERN = Pattern.compile("[\n\r]");
 
-    // 数字模式（用于检测小数点是否在数字中）
     private static final Pattern NUMBER_PATTERN = Pattern.compile("\\d+\\.\\d+");
 
-    // 最小句子长度（字符数）
     private static final int MIN_SENTENCE_LENGTH = 8;
 
-    // 上下文缓冲区最大长度（用于数字小数点检测等上下文判断）
     private static final int CONTEXT_BUFFER_MAX_LENGTH = 20;
+
+    private static final String THINK_START_TAG = "<think>";
+    private static final String THINK_END_TAG = "</think>";
 
     private final StringBuilder currentSentence = new StringBuilder();
     private final StringBuilder contextBuffer = new StringBuilder();
 
+    private boolean insideThink = false;
+    private final StringBuilder thinkBuffer = new StringBuilder();
+
     public SentenceHelper() {
     }
 
-    /**
-     * 命令式分句：逐 token 输入，返回检测到的完整句子，未成句则返回空字符串。
-     * 供 TTS Provider 内部 WebSocket 订阅回调使用。
-     */
     public List<SentenceResult> take(String token) {
         List<SentenceResult> sentences = new ArrayList<>();
         if (token == null || token.isEmpty()) {
             return sentences;
         }
 
-        for (int i = 0; i < token.length();) {
-            int codePoint = token.codePointAt(i);
+        StringBuilder contentBuffer = new StringBuilder();
+        int i = 0;
+        while (i < token.length()) {
+            if (insideThink) {
+                int endTagPos = token.indexOf(THINK_END_TAG, i);
+                if (endTagPos >= 0) {
+                    thinkBuffer.append(token.substring(i, endTagPos));
+                    i = endTagPos + THINK_END_TAG.length();
+                    insideThink = false;
+                    thinkBuffer.setLength(0);
+                } else {
+                    thinkBuffer.append(token.substring(i));
+                    i = token.length();
+                }
+            } else {
+                int startTagPos = token.indexOf(THINK_START_TAG, i);
+                if (startTagPos >= 0) {
+                    if (startTagPos > i) {
+                        contentBuffer.append(token.substring(i, startTagPos));
+                    }
+                    i = startTagPos + THINK_START_TAG.length();
+                    insideThink = true;
+                } else {
+                    contentBuffer.append(token.substring(i));
+                    i = token.length();
+                }
+            }
+        }
+
+        String cleanContent = contentBuffer.toString();
+        if (cleanContent.isEmpty()) {
+            return sentences;
+        }
+
+        for (int j = 0; j < cleanContent.length();) {
+            int codePoint = cleanContent.codePointAt(j);
             String charStr = new String(Character.toChars(codePoint));
 
             contextBuffer.append(charStr);
@@ -110,15 +129,12 @@ public class SentenceHelper implements ChatConverter {
                 }
             }
 
-            i += Character.charCount(codePoint);
+            j += Character.charCount(codePoint);
         }
 
         return sentences;
     }
 
-    /**
-     * 命令式分句：刷出缓冲区剩余内容（在文本流结束时调用）。
-     */
     public SentenceResult take() {
         String rawSentence = currentSentence.toString().trim();
         if (rawSentence.isEmpty()) {
