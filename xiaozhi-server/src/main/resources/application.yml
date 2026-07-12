@@ -44,9 +44,9 @@ spring:
   cache:
     type: redis
 
-  # Flyway 数据库版本管理
+  # Flyway 数据库版本管理（临时禁用以修复 V11 问题）
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 0

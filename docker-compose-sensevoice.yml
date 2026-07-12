@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  sensevoice:
+    build:
+      context: .
+      dockerfile: Dockerfile.sensevoice
+    container_name: xiaozhi-sensevoice
+    restart: unless-stopped
+    ports:
+      - "10096:10096"
+    environment:
+      - TZ=Asia/Shanghai
+    deploy:
+      resources:
+        limits:
+          cpus: '7.0'
+          memory: 6G
+        reservations:
+          cpus: '4.0'
+          memory: 4G
+    networks:
+      - sensevoice-network
+
+networks:
+  sensevoice-network:
+    name: sensevoice-network
+    driver: bridge

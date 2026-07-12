@@ -20,8 +20,8 @@ HOST_PORT=10096
 CONTAINER_PORT=10095
 
 # ---- 镜像地址 ----
-IMAGE_ARM64="registry.cn-hangzhou.aliyuncs.com/funasr_repo/funasr:funasr-runtime-sdk-online-cpu-0.1.13"
-IMAGE_AMD64="registry.cn-hangzhou.aliyuncs.com/funasr_repo/funasr:funasr-runtime-sdk-online-cpu-0.1.13"
+IMAGE_ARM64="registry.cn-hangzhou.aliyuncs.com/funasr_repo/funasr:funasr-runtime-sdk-cpu-0.4.6"
+IMAGE_AMD64="registry.cn-hangzhou.aliyuncs.com/funasr_repo/funasr:funasr-runtime-sdk-cpu-0.4.6"
 
 # ---- 颜色 ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'

@@ -89,6 +89,13 @@ public class TtsServiceFactory {
                     outputPath,
                     runtimePathConfig.resolveTtsModelsDir().toString()
             );
+            case "moss-tts-nano" -> new MossTtsNanoTtsService(
+                    config,
+                    voiceName,
+                    pitch,
+                    speed,
+                    outputPath
+            );
             default -> new EdgeTtsService(voiceName, pitch, speed, outputPath);
         };
     }

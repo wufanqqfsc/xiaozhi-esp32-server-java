@@ -17,5 +17,6 @@ export const ROUTES = {
   SETTING_CONFIG: '/setting/config',
   ERROR_403: '/403',
   ERROR_404: '/404',
+  TTS_TEST: '/config/tts-test',
   ABOUT: '/about',
 } as const

@@ -9,14 +9,15 @@ import com.xiaozhi.ai.tts.TtsServiceFactory;
 import com.xiaozhi.common.model.bo.ConfigBO;
 import com.xiaozhi.config.service.ConfigService;
 import com.xiaozhi.device.service.DeviceService;
+import com.xiaozhi.role.service.RoleService;
 import com.xiaozhi.utils.JsonUtil;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
-import org.springframework.context.annotation.Bean;
+import org.redisson.api.RTopic;
+import org.redisson.api.RedissonClient;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.listener.ChannelTopic;
-import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 
 import java.util.Map;
 
@@ -24,6 +25,10 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Redis 消息订阅配置。
  * 监听跨实例广播，在本实例执行对应操作。
+ * <p>
+ * 使用 Redisson RTopic 实现可靠的 Pub/Sub 订阅。
+ * 之前使用的 Spring Data Redis RedisMessageListenerContainer 在 Redisson 连接工厂下存在
+ * 订阅超时问题（Subscription registration timeout exceeded），因此改用 Redisson 原生 RTopic。
  */
 @Slf4j
 @Configuration
@@ -50,25 +55,55 @@ public class RedisSubscriber {
     @Resource
     private DeviceService deviceService;
 
-    @Bean
-    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory connectionFactory) {
-        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
-        container.setConnectionFactory(connectionFactory);
+    @Resource
+    private RedissonClient redissonClient;
 
-        addListener(container, "onClearConversation", RedisBroadcast.CHANNEL_CLEAR_CONVERSATION);
-        addListener(container, "onRoleChanged", RedisBroadcast.CHANNEL_ROLE_CHANGED);
-        addListener(container, "onConfigChanged", RedisBroadcast.CHANNEL_CONFIG_CHANGED);
-        addListener(container, "onCloseSession", RedisBroadcast.CHANNEL_CLOSE_SESSION);
-        addListener(container, "onRoleUpdated", RedisBroadcast.CHANNEL_ROLE_UPDATED);
-        addListener(container, "onDeviceUpdated", RedisBroadcast.CHANNEL_DEVICE_UPDATED);
+    @Resource
+    private CacheManager cacheManager;
 
-        return container;
-    }
+    @PostConstruct
+    public void initRedissonTopics() {
+        try {
+            RTopic clearConversationTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_CLEAR_CONVERSATION);
+            clearConversationTopic.addListener(String.class, (channel, msg) -> {
+                log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
+                onClearConversation(msg);
+            });
 
-    private void addListener(RedisMessageListenerContainer container, String method, String channel) {
-        MessageListenerAdapter adapter = new MessageListenerAdapter(this, method);
-        adapter.afterPropertiesSet();
-        container.addMessageListener(adapter, new ChannelTopic(channel));
+            RTopic roleChangedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_ROLE_CHANGED);
+            roleChangedTopic.addListener(String.class, (channel, msg) -> {
+                log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
+                onRoleChanged(msg);
+            });
+
+            RTopic configChangedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_CONFIG_CHANGED);
+            configChangedTopic.addListener(String.class, (channel, msg) -> {
+                log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
+                onConfigChanged(msg);
+            });
+
+            RTopic closeSessionTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_CLOSE_SESSION);
+            closeSessionTopic.addListener(String.class, (channel, msg) -> {
+                log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
+                onCloseSession(msg);
+            });
+
+            RTopic roleUpdatedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_ROLE_UPDATED);
+            roleUpdatedTopic.addListener(String.class, (channel, msg) -> {
+                log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
+                onRoleUpdated(msg);
+            });
+
+            RTopic deviceUpdatedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_DEVICE_UPDATED);
+            deviceUpdatedTopic.addListener(String.class, (channel, msg) -> {
+                log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
+                onDeviceUpdated(msg);
+            });
+
+            log.info("Redisson RTopic 订阅初始化完成 - 6 个频道已注册");
+        } catch (Exception e) {
+            log.error("Redisson RTopic 订阅初始化失败", e);
+        }
     }
 
     /**
@@ -103,7 +138,8 @@ public class RedisSubscriber {
     }
 
     /**
-     * 角色属性变更（如音色）：遍历本实例 session，清理使用该角色的 Persona
+     * 角色属性变更（如角色描述、音色等）：遍历本实例 session，清理使用该角色的 Persona，
+     * 同时清除角色缓存，确保下次构建 Persona 时从数据库加载最新配置。
      */
     public void onRoleUpdated(String message) {
         try {
@@ -120,8 +156,15 @@ public class RedisSubscriber {
                     }
                 }
             }
+            Cache roleCache = cacheManager.getCache(RoleService.CACHE_NAME);
+            if (roleCache != null) {
+                roleCache.evict(String.valueOf(roleId));
+                log.debug("已清除角色缓存 - roleId: {}", roleId);
+            }
             if (count > 0) {
                 log.info("角色属性变更，已清理 {} 个 Persona（roleId: {}）", count, roleId);
+            } else {
+                log.debug("角色属性变更，无活跃 Persona 需要清理（roleId: {}）", roleId);
             }
         } catch (Exception e) {
             log.error("处理 roleUpdated 广播失败", e);

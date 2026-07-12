@@ -55,6 +55,9 @@ export default {
     update: '/config',
     delete: '/config',
   },
+  tts: {
+    test: '/tts/test',
+  },
   mcpTool: {
     toggleRoleTool: '/mcpTool/role',         // PATCH /mcpTool/role/{roleId}/tools
     toggleGlobalTool: '/mcpTool/global',     // PATCH /mcpTool/global/tools

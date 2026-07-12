@@ -71,6 +71,28 @@ public abstract class ChatSession {
         }
         this.deviceState = newState;
         log.debug("状态转换: {} -> {} (SessionId: {})", oldState, newState, sessionId);
+        for (java.util.function.BiConsumer<DeviceState, DeviceState> listener : stateListeners) {
+            try {
+                listener.accept(oldState, newState);
+            } catch (Exception e) {
+                log.warn("state listener failed: {}", e.getMessage());
+            }
+        }
+    }
+
+    private final java.util.List<java.util.function.BiConsumer<DeviceState, DeviceState>> stateListeners =
+            new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /**
+     * 注册设备状态变化监听器;(oldState, newState) -> void
+     * 用于 KeepaliveService 等模块订阅 LISTENING 状态的进出。
+     */
+    public void addStateListener(java.util.function.BiConsumer<DeviceState, DeviceState> listener) {
+        if (listener != null) stateListeners.add(listener);
+    }
+
+    public void removeStateListener(java.util.function.BiConsumer<DeviceState, DeviceState> listener) {
+        stateListeners.remove(listener);
     }
 
     /**
@@ -126,8 +148,8 @@ public abstract class ChatSession {
         if (sink != null) {
             sink.tryEmitComplete();
         }
-        // 重置会话状态
-        deviceState = DeviceState.IDLE;
+        // 重置会话状态(走 transitionTo 以触发 LISTENING → IDLE 状态变化,停止 keepalive 等监听器)
+        transitionTo(DeviceState.IDLE);
         setAudioSinks(null);
     }
 

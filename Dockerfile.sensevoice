@@ -1,0 +1,34 @@
+FROM python:3.10-slim
+
+LABEL maintainer="xiaozhi"
+LABEL description="SenseVoice Small WebSocket STT Service (CPU)"
+
+ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
+ENV FUNASR_DISABLE_UPDATE=1
+ENV PIP_SOURCE=https://mirrors.aliyun.com/pypi/simple/
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    git \
+    ffmpeg \
+    libsndfile1 \
+    sox \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY sensevoice_server.py .
+
+RUN pip install --no-cache-dir \
+    -i https://mirrors.aliyun.com/pypi/simple/ \
+    --trusted-host mirrors.aliyun.com \
+    funasr>=1.0.0 \
+    websockets>=12.0 \
+    torch \
+    torchaudio
+
+EXPOSE 10096
+
+CMD ["python", "sensevoice_server.py"]

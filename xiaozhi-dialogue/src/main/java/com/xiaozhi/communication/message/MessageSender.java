@@ -103,6 +103,25 @@ public class MessageSender {
         }
     }
 
+    /**
+     * 向设备发送 keepalive 帧,用于在 device 长时间无数据收到时
+     * (例如 listen 阶段用户未说话)避免 device 端 IsTimeout 误判通道关闭。
+     * ESP32 端 websocket_protocol 在收到任何 JSON 后会刷新 last_incoming_time_。
+     */
+    public void sendKeepalive(ChatSession chatSession) {
+        if (chatSession == null || !chatSession.isOpen()) {
+            return;
+        }
+        ObjectNode messageJson = objectMapper.createObjectNode();
+        messageJson.put("session_id", chatSession.getSessionId());
+        messageJson.put("type", "keepalive");
+        String jsonMessage = messageJson.toString();
+        if (log.isDebugEnabled()) {
+            log.debug("sendKeepalive - SessionId: {}", chatSession.getSessionId());
+        }
+        sendTextMessage(chatSession, jsonMessage);
+    }
+
     public void sendBinaryMessage(ChatSession chatSession, byte[] opusFrame) {
         try {
             if (chatSession == null || !chatSession.isOpen()) {

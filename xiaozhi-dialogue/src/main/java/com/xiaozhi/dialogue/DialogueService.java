@@ -158,6 +158,7 @@ public class DialogueService{
         // 这样可以确保后续的SPEECH_CONTINUE能正确发送数据
         session.closeAudioStream();
         session.createAudioStream();
+        log.info("[DEBUG] startStt - audioSinks创建后状态: {}", session.getAudioSinks() != null ? "OK" : "NULL");
         session.transitionTo(DeviceState.LISTENING);
 
         Thread.startVirtualThread(() -> {
@@ -167,7 +168,9 @@ public class DialogueService{
                     session.sendAudioData(initialAudio);
                 }
 
+                log.info("[DEBUG] STT线程 - audioSinks检查前状态: {}", session.getAudioSinks() != null ? "OK" : "NULL");
                 if (session.getAudioSinks() == null) {
+                    log.warn("[DEBUG] audioSinks为NULL，跳过STT - sessionId: {}", sessionId);
                     return;
                 }
 
@@ -176,7 +179,9 @@ public class DialogueService{
                     return;
                 }
 
+                log.info("[DEBUG] 开始调用FunASR STT - sessionId: {}", sessionId);
                 var sttResult = persona.getSttService().stream(session.getAudioSinks().asFlux());
+                log.info("[DEBUG] FunASR STT返回 - sessionId: {}, result: {}", sessionId, sttResult != null ? sttResult.text() : "null");
 
                 if (sttResult == null || !StringUtils.hasText(sttResult.text())) {
                     return;

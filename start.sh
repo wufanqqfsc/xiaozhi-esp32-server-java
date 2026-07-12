@@ -537,8 +537,17 @@ start_funasr() {
   fi
   # 已运行则跳过
   if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${name}$"; then
-    ok "FunASR 已在运行"
+    ok "FunASR 容器 ${name} 已在运行"
     return 0
+  fi
+  # 端口已被其他 FunASR-like 容器占用（如 xiaozhi-sensevoice）则跳过
+  if lsof -nP -iTCP:"${port}" -sTCP:LISTEN 2>/dev/null | grep -q "LISTEN"; then
+    local existing
+    existing=$(docker ps --filter "publish=${port}" --format '{{.Names}}' 2>/dev/null | head -1)
+    if [[ -n "$existing" ]]; then
+      warn "端口 ${port} 已被容器 ${existing} 占用，跳过 FunASR 启动"
+      return 0
+    fi
   fi
   info "启动 FunASR 语音服务（port ${port}）..."
   bash "$script" start >> "$LOGS_DIR/funasr.log" 2>&1 || {
@@ -566,8 +575,13 @@ funasr_status() {
   local name="${FUNASR_NAME:-xiaozhi-funasr}"
   local port="${FUNASR_PORT:-10096}"
   local script="${FUNASR_SCRIPT:-$ROOT_DIR/bin/funasr.sh}"
+  # 找出监听 port 的容器（兼容 xiaozhi-funasr / xiaozhi-sensevoice 等别名）
+  local running_container
+  running_container=$(docker ps --filter "publish=${port}" --format '{{.Names}}' 2>/dev/null | head -1)
   echo -e "  ${BOLD}FunASR${NC}  容器: $name  端口: $port"
-  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${name}$"; then
+  if [[ -n "$running_container" ]]; then
+    echo -e "    ${GREEN}●${NC} 运行中 (${running_container})"
+  elif docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${name}$"; then
     echo -e "    ${GREEN}●${NC} 运行中"
   else
     echo -e "    ${RED}○${NC} 未运行"

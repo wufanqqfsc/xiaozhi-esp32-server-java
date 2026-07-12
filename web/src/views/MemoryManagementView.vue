@@ -208,14 +208,20 @@ async function fetchMemoryData() {
     pageSize: pagination.pageSize || 10,
   }
 
-  // 只有当选择了角色时才添加 roleId
   if (selectedRoleId.value) {
     params.roleId = selectedRoleId.value
+  } else if (memoryType.value === 'summary' && roles.value.length > 0) {
+    params.roleId = roles.value[0]!.roleId
+    selectedRoleId.value = params.roleId
   }
 
-  // 只有当选择了设备时才添加 deviceId
   if (selectedDeviceId.value) {
     params.deviceId = selectedDeviceId.value
+  }
+
+  if (memoryType.value === 'summary' && !params.roleId) {
+    data.value = []
+    return
   }
 
   try {

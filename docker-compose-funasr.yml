@@ -7,8 +7,8 @@ version: '3.8'
 
 services:
   funasr:
-    # 官方 arm64 镜像（Mac Apple Silicon / Linux arm64）
-    image: registry.cn-hangzhou.aliyuncs.com/funasr_repo/funasr:funasr-runtime-sdk-online-cpu-0.1.13
+    # 升级到 0.4.6 以支持 SenseVoice 模型
+    image: registry.cn-hangzhou.aliyuncs.com/funasr_repo/funasr:funasr-runtime-sdk-cpu-0.4.6
     container_name: xiaozhi-funasr
     restart: unless-stopped
     platform: linux/arm64

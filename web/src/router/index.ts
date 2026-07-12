@@ -176,6 +176,17 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'config/tts-test',
+        name: 'config-tts-test',
+        component: () => import('../views/config/TtsTestView.vue'),
+        meta: {
+          title: 'router.title.ttsTest',
+          parent: 'router.parent.configManagement',
+          requiresAuth: true,
+          permission: 'system:config',
+        },
+      },
+      {
         path: 'config/oss',
         name: 'config-oss',
         component: () => import('../views/config/OssConfigView.vue'),

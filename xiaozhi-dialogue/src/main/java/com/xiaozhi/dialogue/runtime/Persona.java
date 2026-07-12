@@ -286,6 +286,26 @@ public class Persona {
     private static final Pattern THINK_TAG_PATTERN =
             Pattern.compile("(?is)\\s*<think>.*?</think>\\s*");
 
+    private static final int MAX_TEXT_LENGTH = 1000;
+
+    private static final Pattern ABNORMAL_REPEAT_PATTERN =
+            Pattern.compile("(.)(?:\\1{10,})");
+
+    private static String filterAbnormalText(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        if (text.length() > MAX_TEXT_LENGTH * 2) {
+            log.warn("LLM返回文本过长 ({} 字符)，进行截断", text.length());
+            text = text.substring(0, MAX_TEXT_LENGTH * 2);
+        }
+        if (ABNORMAL_REPEAT_PATTERN.matcher(text).find()) {
+            log.warn("LLM返回文本包含异常重复内容，过滤后保留: {}", text.substring(0, Math.min(100, text.length())));
+            return text.replaceAll("(.)(?:\\1{10,})", "$1$1$1");
+        }
+        return text;
+    }
+
     /**
      * 将 ChatResponse 流转换为 ChatToken 流，包含思考内容和正式回复。
      * <p>
@@ -312,6 +332,7 @@ public class Persona {
                     String text = message.getText();
                     if (text != null) {
                         text = THINK_TAG_PATTERN.matcher(text).replaceAll("").trim();
+                        text = filterAbnormalText(text);
                     }
                     if (text != null && !text.isEmpty()) {
                         tokens.add(ChatToken.content(text));
