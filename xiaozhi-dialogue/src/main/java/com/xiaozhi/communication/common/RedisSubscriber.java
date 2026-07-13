@@ -15,6 +15,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.redisson.api.RTopic;
 import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Configuration;
@@ -64,43 +65,45 @@ public class RedisSubscriber {
     @PostConstruct
     public void initRedissonTopics() {
         try {
-            RTopic clearConversationTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_CLEAR_CONVERSATION);
+            // 使用 StringCodec 避免 JsonJacksonCodec 解码原始字符串失败的问题
+            // （发布侧使用 StringRedisTemplate.convertAndSend 发送原始字符串）
+            RTopic clearConversationTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_CLEAR_CONVERSATION, StringCodec.INSTANCE);
             clearConversationTopic.addListener(String.class, (channel, msg) -> {
                 log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
                 onClearConversation(msg);
             });
 
-            RTopic roleChangedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_ROLE_CHANGED);
+            RTopic roleChangedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_ROLE_CHANGED, StringCodec.INSTANCE);
             roleChangedTopic.addListener(String.class, (channel, msg) -> {
                 log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
                 onRoleChanged(msg);
             });
 
-            RTopic configChangedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_CONFIG_CHANGED);
+            RTopic configChangedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_CONFIG_CHANGED, StringCodec.INSTANCE);
             configChangedTopic.addListener(String.class, (channel, msg) -> {
                 log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
                 onConfigChanged(msg);
             });
 
-            RTopic closeSessionTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_CLOSE_SESSION);
+            RTopic closeSessionTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_CLOSE_SESSION, StringCodec.INSTANCE);
             closeSessionTopic.addListener(String.class, (channel, msg) -> {
                 log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
                 onCloseSession(msg);
             });
 
-            RTopic roleUpdatedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_ROLE_UPDATED);
+            RTopic roleUpdatedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_ROLE_UPDATED, StringCodec.INSTANCE);
             roleUpdatedTopic.addListener(String.class, (channel, msg) -> {
                 log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
                 onRoleUpdated(msg);
             });
 
-            RTopic deviceUpdatedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_DEVICE_UPDATED);
+            RTopic deviceUpdatedTopic = redissonClient.getTopic(RedisBroadcast.CHANNEL_DEVICE_UPDATED, StringCodec.INSTANCE);
             deviceUpdatedTopic.addListener(String.class, (channel, msg) -> {
                 log.debug("Redisson 收到消息 - channel: {}, message: {}", channel, msg);
                 onDeviceUpdated(msg);
             });
 
-            log.info("Redisson RTopic 订阅初始化完成 - 6 个频道已注册");
+            log.info("Redisson RTopic 订阅初始化完成 - 6 个频道已注册 (StringCodec)");
         } catch (Exception e) {
             log.error("Redisson RTopic 订阅初始化失败", e);
         }

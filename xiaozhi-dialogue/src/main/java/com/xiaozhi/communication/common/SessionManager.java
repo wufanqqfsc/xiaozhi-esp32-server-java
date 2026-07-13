@@ -4,6 +4,9 @@ import com.xiaozhi.communication.server.websocket.WebSocketSession;
 import com.xiaozhi.common.model.bo.DeviceBO;
 import com.xiaozhi.ai.llm.memory.Conversation;
 import com.xiaozhi.device.domain.repository.DeviceRepository;
+import com.xiaozhi.dialogue.playback.Player;
+import com.xiaozhi.dialogue.playback.Synthesizer;
+import com.xiaozhi.dialogue.runtime.Persona;
 import com.xiaozhi.event.ChatAudioOpenedEvent;
 import com.xiaozhi.event.ChatSessionClosedEvent;
 import com.xiaozhi.event.DeviceOnlineEvent;
@@ -190,10 +193,11 @@ public class SessionManager {
             return;
         }
         try {
+            cleanupPersonaResources(chatSession);
+
             if (chatSession instanceof WebSocketSession) {
                 removeSession(chatSession.getSessionId());
             }
-            // 解除设备-实例绑定
             if (chatSession.getDevice() != null) {
                 deviceRegistry.unbind(chatSession.getDevice().getDeviceId());
             }
@@ -207,6 +211,41 @@ public class SessionManager {
         } catch (Exception e) {
             log.error("清理会话资源时发生错误 - SessionId: {}",
                     chatSession.getSessionId(), e);
+        }
+    }
+
+    private void cleanupPersonaResources(ChatSession chatSession) {
+        Persona persona = chatSession.getPersona();
+        if (persona == null) {
+            return;
+        }
+        String sessionId = chatSession.getSessionId();
+        try {
+            Synthesizer synthesizer = persona.getSynthesizer();
+            if (synthesizer != null && synthesizer.isActive()) {
+                synthesizer.cancel();
+                log.info("会话关闭：取消TTS合成 - SessionId: {}", sessionId);
+            }
+        } catch (Exception e) {
+            log.warn("会话关闭：取消TTS合成失败 - SessionId: {}", sessionId, e);
+        }
+        try {
+            Player player = chatSession.getPlayer();
+            if (player != null) {
+                player.stop();
+                log.info("会话关闭：停止播放器 - SessionId: {}", sessionId);
+            }
+        } catch (Exception e) {
+            log.warn("会话关闭：停止播放器失败 - SessionId: {}", sessionId, e);
+        }
+        try {
+            Conversation conversation = persona.getConversation();
+            if (conversation != null) {
+                conversation.clear();
+                log.info("会话关闭：清理对话历史 - SessionId: {}", sessionId);
+            }
+        } catch (Exception e) {
+            log.warn("会话关闭：清理对话历史失败 - SessionId: {}", sessionId, e);
         }
     }
 

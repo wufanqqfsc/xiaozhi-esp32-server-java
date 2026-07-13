@@ -16,6 +16,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
@@ -39,6 +40,8 @@ public class FunASRSttService implements SttService {
     private static final int QUEUE_TIMEOUT_MS = 100;
     private static final long RECOGNITION_TIMEOUT_MS = 90000;
     private static final long GRACEFUL_CLOSE_WAIT_MS = 2000;
+    private static final long SILENCE_CLOSE_WAIT_MS = 3000;
+    private static final long FINAL_CLOSE_DELAY_MS = 500;
 
     private final String apiUrl;
 
@@ -66,6 +69,8 @@ public class FunASRSttService implements SttService {
         StringBuilder offlineResult = new StringBuilder();
         AtomicReference<String> finalResult = new AtomicReference<>("");
         CountDownLatch recognitionLatch = new CountDownLatch(1);
+        AtomicLong lastMessageTime = new AtomicLong(System.currentTimeMillis());
+        AtomicBoolean closeRequested = new AtomicBoolean(false);
 
         audioSink.subscribe(
             data -> audioQueue.offer(data),
@@ -102,10 +107,30 @@ public class FunASRSttService implements SttService {
                         if (isOpen()) {
                             send(SPEAKING_END);
                         }
-                        try {
-                            Thread.sleep(3000);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
+                        long silenceStart = System.currentTimeMillis();
+                        while (isOpen() && !closeRequested.get() && recognitionLatch.getCount() > 0) {
+                            try {
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                            long elapsed = System.currentTimeMillis() - lastMessageTime.get();
+                            long totalElapsed = System.currentTimeMillis() - silenceStart;
+                            if (elapsed >= SILENCE_CLOSE_WAIT_MS) {
+                                synchronized (offlineResult) {
+                                    if (offlineResult.length() > 0) {
+                                        log.info("FunASR 静默超时({}ms)，主动关闭连接，已有结果: {}", elapsed, offlineResult);
+                                        closeRequested.set(true);
+                                        close();
+                                        break;
+                                    }
+                                }
+                            }
+                            if (totalElapsed > RECOGNITION_TIMEOUT_MS / 2 && totalElapsed % 10000 < 500) {
+                                log.debug("FunASR 等待识别结果中，已等待 {}ms，最后消息 {}ms 前",
+                                        totalElapsed, elapsed);
+                            }
                         }
                     } catch (Exception e) {
                         log.error("发送音频数据时发生错误", e);
@@ -121,10 +146,14 @@ public class FunASRSttService implements SttService {
                     String mode = jsonObject.getString("mode");
                     String text = jsonObject.getString("text");
                     log.debug("FunASR 收到消息: is_final={}, mode={}, text={}", isFinal, mode, text);
+                    lastMessageTime.set(System.currentTimeMillis());
+
+                    boolean hasText = text != null && !text.isEmpty();
+                    boolean isFinalFlag = Boolean.TRUE.equals(isFinal);
+                    boolean isNotFinal = Boolean.FALSE.equals(isFinal);
 
                     synchronized (offlineResult) {
-                        boolean isFinalFlag = Boolean.TRUE.equals(isFinal);
-                        if (text != null && !text.isEmpty()) {
+                        if (hasText) {
                             text = cleanSenseVoiceText(text);
                             if (text.isEmpty()) {
                                 return;
@@ -143,6 +172,34 @@ public class FunASRSttService implements SttService {
                                 log.info("FunASR 最终结果: {}", text);
                             }
                         }
+                    }
+
+                    if (isNotFinal && !hasText && isCompleted.get() && closeRequested.compareAndSet(false, true)) {
+                        log.info("FunASR 收到最终结束信号(is_final=false + 空文本)，延迟关闭连接");
+                        Thread.startVirtualThread(() -> {
+                            try {
+                                Thread.sleep(FINAL_CLOSE_DELAY_MS);
+                                if (isOpen()) {
+                                    close();
+                                }
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        });
+                    }
+
+                    if ("offline".equals(mode) && isFinalFlag && hasText && closeRequested.compareAndSet(false, true)) {
+                        log.info("FunASR 收到离线最终结果(is_final=true + offline)，延迟关闭连接");
+                        Thread.startVirtualThread(() -> {
+                            try {
+                                Thread.sleep(FINAL_CLOSE_DELAY_MS);
+                                if (isOpen()) {
+                                    close();
+                                }
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        });
                     }
                 } catch (Exception e) {
                     log.error("解析FunASR响应失败", e);

@@ -16,6 +16,13 @@ import sys
 
 os.environ["FUNASR_DISABLE_UPDATE"] = "1"
 os.environ["MODELSCOPE_SDK_DEBUG"] = "0"
+os.environ["PYTHONUNBUFFERED"] = "1"
+
+# 原始 print 替换为自动 flush 版本
+_original_print = print
+def print(*args, **kwargs):
+    kwargs['flush'] = True
+    _original_print(*args, **kwargs)
 
 from funasr import AutoModel
 
@@ -23,8 +30,8 @@ print("=" * 50)
 print("SenseVoice Small WebSocket 服务 (CPU)")
 print("=" * 50)
 
-MODEL_NAME = "iic/SenseVoiceSmall"
-MODEL_REVISION = "v2.0.4"
+MODEL_NAME = "/workspace/models/SenseVoiceSmall"
+SERVER_PORT = 10095
 
 class SenseVoiceServer:
     def __init__(self):
@@ -34,11 +41,11 @@ class SenseVoiceServer:
 
         self.model = AutoModel(
             model=MODEL_NAME,
-            model_revision=MODEL_REVISION,
             device="cpu",
             disable_pbar=True,
             disable_log=True,
             disable_update=True,
+            ncpu=4,
         )
         print("[初始化] 模型加载完成!")
 
@@ -51,16 +58,26 @@ class SenseVoiceServer:
 
     def process_audio_bytes(self, audio_bytes, sample_rate=16000):
         """处理音频字节流"""
+        import tempfile
+        import os as _os
         try:
-            audio, sample_rate = self.model.generate(
-                input=audio_bytes,
+            tmp_path = _os.path.join(_os.environ.get('TMPDIR', '/tmp'), 'sensevoice_input.wav')
+            with wave.open(tmp_path, 'wb') as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(sample_rate)
+                wf.writeframes(audio_bytes)
+
+            res = self.model.generate(
+                input=tmp_path,
                 batch_size_s=300,
                 merge_vad=True,
                 merge_length_s=15,
+                use_itn=True,
             )
 
-            if audio and len(audio) > 0:
-                result = audio[0]
+            if res and len(res) > 0:
+                result = res[0]
                 text = result.get("text", "")
                 text = self.clean_text(text)
 
@@ -72,14 +89,16 @@ class SenseVoiceServer:
                 }
             return None
         except Exception as e:
+            import traceback
             print(f"[错误] 处理音频失败: {e}")
+            traceback.print_exc()
             return None
 
 print("[启动] 正在启动 WebSocket 服务...")
 
 server_instance = None
 
-async def handle_client(websocket, path):
+async def handle_client(websocket):
     """处理客户端连接"""
     global server_instance
     client_ip = websocket.remote_address
@@ -157,7 +176,7 @@ async def main():
     print("[启动] 初始化模型...")
     server_instance = SenseVoiceServer()
 
-    print("[启动] 启动 WebSocket 服务: ws://0.0.0.0:10096")
+    print(f"[启动] 启动 WebSocket 服务: ws://0.0.0.0:{SERVER_PORT}")
     print("-" * 50)
 
     stop_event = asyncio.Event()
@@ -173,7 +192,7 @@ async def main():
         async with websockets.serve(
             handle_client,
             "0.0.0.0",
-            10096,
+            SERVER_PORT,
             ping_interval=None,
             ping_timeout=None,
         ):

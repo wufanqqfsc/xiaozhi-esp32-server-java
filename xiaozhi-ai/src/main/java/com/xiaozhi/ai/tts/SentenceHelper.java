@@ -28,6 +28,11 @@ public class SentenceHelper implements ChatConverter {
 
     private static final int CONTEXT_BUFFER_MAX_LENGTH = 20;
 
+    // 强制分句阈值：累计字符数超过此值但仍未遇到结束/暂停标点时，强制作为句子发送。
+    // 避免 LLM 输出长句（如 "您今日的运势是..." 200 字无句末标点）时整段缓冲，
+    // 导致 TTS_FIRST_CHUNK 严重偏慢（v2 测试曾出现 7168ms）。
+    private static final int FORCE_FLUSH_LENGTH = 32;
+
     private static final String THINK_START_TAG = "<think>";
     private static final String THINK_END_TAG = "</think>";
 
@@ -115,6 +120,9 @@ public class SentenceHelper implements ChatConverter {
                 shouldSendSentence = true;
             } else if ((isPauseMark || isSpecialMark || isEmoji || containsKaomoji)
                     && currentSentence.length() >= MIN_SENTENCE_LENGTH) {
+                shouldSendSentence = true;
+            } else if (currentSentence.length() >= FORCE_FLUSH_LENGTH) {
+                // 强制分句：累计过长但无标点时强制送出，避免 TTS 整段合成阻塞
                 shouldSendSentence = true;
             }
 

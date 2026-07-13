@@ -99,6 +99,13 @@ public class DialogueService{
                 return;
             }
 
+            // 如果设备状态不是 LISTENING，跳过 VAD 处理并清理会话
+            // （避免 THINKING/SPEAKING 状态下仍调用 VAD，导致超时日志泛滥）
+            if (session.getDeviceState() != DeviceState.LISTENING) {
+                vadService.resetSession(sessionId);
+                return;
+            }
+
             // 处理VAD
             VadService.VadResult vadResult = vadService.processAudio(sessionId, opusData);
             if (vadResult == null || vadResult.getStatus() == VadStatus.ERROR

@@ -305,6 +305,10 @@ public class VadService {
                     log.info("聆听时长超过 {}ms ({}ms)，强制结束聆听 - SessionId: {}",
                             maxListeningMs, listeningElapsed, sessionId);
                     state.resetSilenceFrameCount();
+                    // 重置会话开始时间，防止后续帧重复触发超时日志
+                    // （超时已返回 SPEECH_END，DialogueService 会切换到 THINKING 状态，
+                    //  后续帧在 DialogueService 中会被跳过，但 VAD 仍可能被调用）
+                    state.sessionStartMs = System.currentTimeMillis();
                     return new VadResult(VadStatus.SPEECH_END, pcmData);
                 }
 

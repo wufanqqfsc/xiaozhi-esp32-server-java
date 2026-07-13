@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM registry.cn-hangzhou.aliyuncs.com/acs/python:3.10-slim
 
 LABEL maintainer="xiaozhi"
 LABEL description="SenseVoice Small WebSocket STT Service (CPU)"

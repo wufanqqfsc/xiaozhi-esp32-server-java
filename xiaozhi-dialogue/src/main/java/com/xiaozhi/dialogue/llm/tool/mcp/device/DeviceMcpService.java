@@ -300,7 +300,7 @@ public class DeviceMcpService {
 
         DeviceMcpMessage response = null;
         try {
-            response = future.get(30, TimeUnit.SECONDS);
+            response = future.get(15, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("SessionId: {}, Error sending MCP request：{}", chatSession.getSessionId(), e);
             chatSession.getDeviceMcpHolder().getMcpPendingRequests().remove(id);
