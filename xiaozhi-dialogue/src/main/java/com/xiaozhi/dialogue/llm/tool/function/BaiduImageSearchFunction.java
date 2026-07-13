@@ -5,26 +5,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiaozhi.ai.llm.tool.ToolCallStringResultConverter;
 import com.xiaozhi.ai.tool.ToolsGlobalRegistry;
 import com.xiaozhi.ai.tool.session.ToolSession;
-import com.xiaozhi.communication.ServerAddressProvider;
 import com.xiaozhi.communication.common.ChatSession;
 import com.xiaozhi.communication.common.SessionManager;
-import com.xiaozhi.dialogue.llm.tool.mcp.device.DeviceMcpService;
+import com.xiaozhi.device.domain.repository.DeviceRepository;
+import com.xiaozhi.dialogue.device.DeviceHttpClient;
 import com.xiaozhi.dialogue.runtime.Persona;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,9 +33,10 @@ import java.util.Map;
 @Component
 public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunction {
     private static final String TOOL_NAME = "search_and_display_gif";
-    private static final String TEMP_DIR = "/tmp/xiaozhi-images";
+    private static final String SD_IMAGE_DIR = "images";
     private static final int MAX_IMAGE_SIZE = 500 * 1024; // 500KB
     private static final int MAX_CANDIDATES = 5;
+    private static final int DISPLAY_DURATION_MS = 5000;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
@@ -45,13 +45,13 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
             .build();
 
     @Resource
-    private DeviceMcpService deviceMcpService;
+    private DeviceHttpClient deviceHttpClient;
 
     @Resource
     private SessionManager sessionManager;
 
     @Resource
-    private ServerAddressProvider serverAddressProvider;
+    private DeviceRepository deviceRepository;
 
     private final ToolCallback toolCallback = FunctionToolCallback
             .builder(TOOL_NAME, (Map<String, Object> params, ToolContext toolContext) -> {
@@ -62,14 +62,18 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
 
                 boolean gifOnly = Boolean.TRUE.equals(params.get("gif_only"));
 
-                // 从 ToolContext 获取 session 和 device 信息
                 String sessionId = (String) toolContext.getContext().get(Persona.TOOL_CONTEXT_SESSION_ID_KEY);
                 String deviceId = (String) toolContext.getContext().get("deviceId");
 
-                log.info("百度图片搜索: query={}, gif_only={}, sessionId={}, deviceId={}", query, gifOnly, sessionId, deviceId);
+                log.info("百度图片搜索: query={}, gif_only={}, sessionId={}, deviceId={}",
+                        query, gifOnly, sessionId, deviceId);
 
                 try {
-                    // 1. 搜索百度图片
+                    String deviceIp = resolveDeviceIp(sessionId, deviceId);
+                    if (!StringUtils.hasText(deviceIp)) {
+                        return "无法获取设备 IP，请确认设备在线且已上报 IP";
+                    }
+
                     List<ImageCandidate> candidates = searchBaiduImages(query, gifOnly);
                     if (candidates.isEmpty()) {
                         return gifOnly
@@ -77,47 +81,37 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
                                 : "未找到与\"" + query + "\"相关的图片";
                     }
 
-                    // 2. 下载验证图片
-                    Path downloadedPath = downloadAndValidate(candidates);
-                    if (downloadedPath == null) {
+                    DownloadedImage downloaded = downloadAndValidate(candidates);
+                    if (downloaded == null) {
                         return "找到了图片但下载失败，请稍后重试";
                     }
 
-                    String fileName = downloadedPath.getFileName().toString();
-                    String contentType = Files.probeContentType(downloadedPath);
+                    String sdPath = SD_IMAGE_DIR + "/search_"
+                            + System.currentTimeMillis() + downloaded.extension;
 
-                    // 3. 构造本地 URL
-                    String localUrl = serverAddressProvider.getServerAddress() + "/api/images/temp/" + fileName;
-                    log.info("本地图片URL: {}", localUrl);
-
-                    // 4. 调用设备 MCP 工具显示图片
-                    Map<String, Object> result = deviceMcpService.callDeviceTool(
-                            deviceId,
-                            "self.screen.display_gif",
-                            Map.of("url", localUrl)
+                    JsonNode uploadResult = deviceHttpClient.uploadToSdCard(
+                            deviceIp,
+                            sdPath,
+                            downloaded.data,
+                            true,
+                            DISPLAY_DURATION_MS,
+                            downloaded.isGif
                     );
 
-                    log.info("设备 MCP 调用结果: {}", result);
+                    log.info("设备 SD 卡上传并显示成功: path={}, response={}", sdPath, uploadResult);
 
-                    // 5. 返回成功信息给 LLM
-                    ImageCandidate used = candidates.stream()
-                            .filter(c -> c.matchesFile(downloadedPath))
-                            .findFirst()
-                            .orElse(null);
-
-                    if (used != null) {
-                        return String.format("已成功在设备上显示图片。关键词: %s, 类型: %s, 尺寸: %dx%d",
-                                query, contentType != null ? contentType : "unknown", used.width, used.height);
-                    }
-                    return "已成功在设备上显示图片: " + query;
+                    ImageCandidate used = downloaded.candidate;
+                    return String.format("已成功在设备上显示图片。关键词: %s, 路径: /sdcard/%s, 类型: %s, 尺寸: %dx%d",
+                            query, sdPath, downloaded.contentType, used.width, used.height);
 
                 } catch (Exception e) {
                     log.error("图片搜索显示失败: query={}", query, e);
                     return "图片搜索失败: " + e.getMessage();
                 }
             })
+            .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
             .description("搜索网络图片并在设备屏幕上显示。当用户要求查看某个主题的图片、GIF动图时调用此工具。"
-                    + "工具会自动搜索百度图片、下载到本地、并在ESP32设备屏幕上显示。"
+                    + "工具会自动搜索百度图片、上传到设备SD卡、并在ESP32贾维斯屏幕上显示。"
                     + "参数 gif_only 为 true 时只搜索GIF动图。")
             .inputSchema("""
                     {
@@ -155,9 +149,25 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
         return "百度图片搜索与设备显示";
     }
 
-    /**
-     * 调用百度图片搜索 API
-     */
+    private String resolveDeviceIp(String sessionId, String deviceId) {
+        if (StringUtils.hasText(sessionId)) {
+            ChatSession chatSession = sessionManager.getSession(sessionId);
+            if (chatSession != null && chatSession.getDevice() != null) {
+                String ip = chatSession.getDevice().getIp();
+                if (StringUtils.hasText(ip)) {
+                    return ip;
+                }
+            }
+        }
+        if (StringUtils.hasText(deviceId)) {
+            return deviceRepository.findById(deviceId)
+                    .map(device -> device.getIp())
+                    .filter(StringUtils::hasText)
+                    .orElse(null);
+        }
+        return null;
+    }
+
     private List<ImageCandidate> searchBaiduImages(String query, boolean gifOnly) {
         List<ImageCandidate> candidates = new ArrayList<>();
         try {
@@ -195,18 +205,15 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
                 int width = getIntOrZero(item, "width");
                 int height = getIntOrZero(item, "height");
 
-                // 跳过没有 URL 的结果
                 if (thumbURL == null || thumbURL.isEmpty()) continue;
 
-                // GIF 筛选
                 boolean isGif = "gif".equalsIgnoreCase(type) || thumbURL.toLowerCase().endsWith(".gif");
                 if (gifOnly && !isGif) continue;
 
-                // 尺寸筛选 (优先选择 ≤ 500px 的图片)
-                if (width > 0 && height > 0 && (width > 800 || height > 800)) continue;
+                if (width > 0 && height > 0 && (width > 500 || height > 500)) continue;
 
                 candidates.add(new ImageCandidate(thumbURL, type, width, height, isGif));
-                if (candidates.size() >= MAX_CANDIDATES * 2) break; // 多收集一些用于下载重试
+                if (candidates.size() >= MAX_CANDIDATES * 2) break;
             }
 
             log.info("百度图片搜索 '{}' 返回 {} 个候选", query, candidates.size());
@@ -216,27 +223,15 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
         return candidates;
     }
 
-    /**
-     * 下载并验证图片
-     */
-    private Path downloadAndValidate(List<ImageCandidate> candidates) {
-        try {
-            Files.createDirectories(Paths.get(TEMP_DIR));
-        } catch (Exception e) {
-            log.error("创建临时目录失败: {}", TEMP_DIR, e);
-            return null;
-        }
-
+    private DownloadedImage downloadAndValidate(List<ImageCandidate> candidates) {
         int tried = 0;
         for (ImageCandidate candidate : candidates) {
             if (tried >= MAX_CANDIDATES) break;
             tried++;
 
             try {
-                String imageUrl = candidate.url;
-
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(imageUrl))
+                        .uri(URI.create(candidate.url))
                         .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
                         .timeout(Duration.ofSeconds(8))
                         .GET()
@@ -244,36 +239,40 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
 
                 HttpResponse<byte[]> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofByteArray());
                 if (response.statusCode() != 200) {
-                    log.debug("下载图片失败 ({}): statusCode={}", imageUrl, response.statusCode());
                     continue;
                 }
 
                 byte[] data = response.body();
                 if (data == null || data.length == 0 || data.length > MAX_IMAGE_SIZE) {
-                    log.debug("图片大小不合适: {} bytes, url={}", data != null ? data.length : 0, imageUrl);
                     continue;
                 }
 
-                // 确定文件扩展名
                 String contentType = response.headers().firstValue("content-type").orElse("");
+                if (!isImageContentType(contentType, candidate)) {
+                    log.debug("跳过非图片内容: contentType={}, url={}", contentType, candidate.url);
+                    continue;
+                }
+
                 String ext = determineExtension(contentType, candidate);
-
-                // 生成唯一文件名
-                String fileName = System.currentTimeMillis() + "_" + tried + ext;
-                Path filePath = Paths.get(TEMP_DIR, fileName);
-
-                Files.write(filePath, data);
-
-                log.info("图片下载成功: {} -> {} ({} bytes)", imageUrl, filePath, data.length);
-                candidate.downloadedPath = filePath;
-                return filePath;
+                log.info("图片下载成功: {} ({} bytes)", candidate.url, data.length);
+                return new DownloadedImage(data, ext, contentType, candidate);
 
             } catch (Exception e) {
                 log.debug("下载图片异常: {}", candidate.url, e);
             }
         }
-
         return null;
+    }
+
+    private boolean isImageContentType(String contentType, ImageCandidate candidate) {
+        if (contentType != null && contentType.toLowerCase().startsWith("image/")) {
+            return true;
+        }
+        if (contentType == null || contentType.isBlank()) {
+            return candidate.isGif
+                    || candidate.url.toLowerCase().matches(".*\\.(gif|jpe?g|png|webp)(\\?.*)?$");
+        }
+        return false;
     }
 
     private String determineExtension(String contentType, ImageCandidate candidate) {
@@ -281,6 +280,7 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
             if (contentType.contains("gif")) return ".gif";
             if (contentType.contains("jpeg") || contentType.contains("jpg")) return ".jpg";
             if (contentType.contains("png")) return ".png";
+            if (contentType.contains("webp")) return ".webp";
         }
         if (candidate.isGif) return ".gif";
         return ".jpg";
@@ -302,7 +302,6 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
         final int width;
         final int height;
         final boolean isGif;
-        Path downloadedPath;
 
         ImageCandidate(String url, String type, int width, int height, boolean isGif) {
             this.url = url;
@@ -311,9 +310,21 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
             this.height = height;
             this.isGif = isGif;
         }
+    }
 
-        boolean matchesFile(Path file) {
-            return downloadedPath != null && downloadedPath.equals(file);
+    private static class DownloadedImage {
+        final byte[] data;
+        final String extension;
+        final String contentType;
+        final ImageCandidate candidate;
+        final boolean isGif;
+
+        DownloadedImage(byte[] data, String extension, String contentType, ImageCandidate candidate) {
+            this.data = data;
+            this.extension = extension;
+            this.contentType = contentType;
+            this.candidate = candidate;
+            this.isGif = candidate.isGif || ".gif".equalsIgnoreCase(extension);
         }
     }
 }
