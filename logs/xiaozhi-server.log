@@ -1,0 +1,63 @@
+Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+07-14 15:05:32.633 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:53[0;39m - Starting XiaozhiApplication v5.0.0 using Java 25.0.2 with PID 78833 (/Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/xiaozhi-server/target/xiaozhi-server-5.0.0.jar started by sfan in /Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java)
+2026-07-14 15:05:32.633 [main] INFO  c.xiaozhi.XiaozhiApplication:53 - Starting XiaozhiApplication v5.0.0 using Java 25.0.2 with PID 78833 (/Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/xiaozhi-server/target/xiaozhi-server-5.0.0.jar started by sfan in /Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java)
+07-14 15:05:32.637 [main] [39mDEBUG[0;39m [36mc.xiaozhi.XiaozhiApplication:54[0;39m - Running with Spring Boot v3.5.8, Spring v6.2.14
+2026-07-14 15:05:32.637 [main] DEBUG c.xiaozhi.XiaozhiApplication:54 - Running with Spring Boot v3.5.8, Spring v6.2.14
+07-14 15:05:32.638 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:658[0;39m - The following 1 profile is active: "dev"
+2026-07-14 15:05:32.638 [main] INFO  c.xiaozhi.XiaozhiApplication:658 - The following 1 profile is active: "dev"
+07-14 15:05:33.562 [main] [39mTRACE[0;39m [36mo.s.a.m.c.c.a.McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition:84[0;39m - Condition McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition on org.springframework.ai.mcp.client.common.autoconfigure.McpToolCallbackAutoConfiguration matched due to AllNestedConditions 2 matched 0 did not; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.ToolCallbackProviderEnabled @ConditionalOnProperty (spring.ai.mcp.client.toolcallback.enabled=true) matched; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.McpAutoConfigEnabled @ConditionalOnProperty (spring.ai.mcp.client.enabled=true) matched
+2026-07-14 15:05:33.562 [main] TRACE o.s.a.m.c.c.a.McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition:84 - Condition McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition on org.springframework.ai.mcp.client.common.autoconfigure.McpToolCallbackAutoConfiguration matched due to AllNestedConditions 2 matched 0 did not; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.ToolCallbackProviderEnabled @ConditionalOnProperty (spring.ai.mcp.client.toolcallback.enabled=true) matched; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.McpAutoConfigEnabled @ConditionalOnProperty (spring.ai.mcp.client.enabled=true) matched
+Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+07-14 15:05:37.171 [main] [39mDEBUG[0;39m [36mc.x.s.c.SecurityHeaderFilter:240[0;39m - Filter 'securityHeaderFilter' configured for use
+2026-07-14 15:05:37.171 [main] DEBUG c.x.s.c.SecurityHeaderFilter:240 - Filter 'securityHeaderFilter' configured for use
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by io.netty.util.internal.PlatformDependent0$4 (jar:nested:/Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/xiaozhi-server/target/xiaozhi-server-5.0.0.jar/!BOOT-INF/lib/netty-common-4.1.110.Final.jar!/)
+WARNING: Please consider reporting this to the maintainers of class io.netty.util.internal.PlatformDependent0$4
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by io.netty.util.internal.NativeLibraryUtil in an unnamed module (jar:nested:/Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/xiaozhi-server/target/xiaozhi-server-5.0.0.jar/!BOOT-INF/lib/netty-common-4.1.110.Final.jar!/)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+ _ _   |_  _ _|_. ___ _ |    _ 
+| | |\/|_)(_| | |_\  |_)||_|_\ 
+     /               |         
+                        3.5.16 
+07-14 15:05:38.636 [main] [31mWARN [0;39m [36mc.b.m.c.m.TableInfoHelper:364[0;39m - Can not find table primary key in Class: "com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO".
+2026-07-14 15:05:38.636 [main] WARN  c.b.m.c.m.TableInfoHelper:364 - Can not find table primary key in Class: "com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO".
+07-14 15:05:38.637 [main] [31mWARN [0;39m [36mc.b.m.c.i.DefaultSqlInjector:56[0;39m - class com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO ,Not found @TableId annotation, Cannot use Mybatis-Plus 'xxById' Method.
+2026-07-14 15:05:38.637 [main] WARN  c.b.m.c.i.DefaultSqlInjector:56 - class com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO ,Not found @TableId annotation, Cannot use Mybatis-Plus 'xxById' Method.
+07-14 15:05:38.711 [main] [34mINFO [0;39m [36mc.x.ai.stt.SttServiceFactory:47[0;39m - 正在初始化默认语音识别服务(Vosk)...
+2026-07-14 15:05:38.711 [main] INFO  c.x.ai.stt.SttServiceFactory:47 - 正在初始化默认语音识别服务(Vosk)...
+07-14 15:05:38.725 [main] [34mINFO [0;39m [36mc.x.a.s.p.VoskSttService:83[0;39m - Vosk library loaded for macOS M-series chip.
+2026-07-14 15:05:38.725 [main] INFO  c.x.a.s.p.VoskSttService:83 - Vosk library loaded for macOS M-series chip.
+07-14 15:05:39.842 [main] [31mWARN [0;39m [36mc.x.ai.stt.SttServiceFactory:82[0;39m - Vosk STT服务初始化失败: Error looking up function 'vosk_recognizer_set_grm': dlsym(0x6e0cffc0, vosk_recognizer_set_grm): symbol not found
+2026-07-14 15:05:39.842 [main] WARN  c.x.ai.stt.SttServiceFactory:82 - Vosk STT服务初始化失败: Error looking up function 'vosk_recognizer_set_grm': dlsym(0x6e0cffc0, vosk_recognizer_set_grm): symbol not found
+07-14 15:05:39.843 [main] [31mWARN [0;39m [36mc.x.ai.stt.SttServiceFactory:52[0;39m - 默认语音识别服务(Vosk)初始化失败，将在需要时尝试使用备选服务
+2026-07-14 15:05:39.843 [main] WARN  c.x.ai.stt.SttServiceFactory:52 - 默认语音识别服务(Vosk)初始化失败，将在需要时尝试使用备选服务
+____ ____    ___ ____ _  _ ____ _  _ 
+[__  |__| __  |  |  | |_/  |___ |\ | 
+___] |  |     |  |__| | \_ |___ | \| 
+https://sa-token.cc (v1.39.0)
+07-14 15:05:40.933 [main] [31mWARN [0;39m [36mo.s.m.p.s.SyncMcpSamplingProvider:111[0;39m - No sampling methods found
+2026-07-14 15:05:40.933 [main] WARN  o.s.m.p.s.SyncMcpSamplingProvider:111 - No sampling methods found
+07-14 15:05:40.935 [main] [31mWARN [0;39m [36mo.s.m.p.e.SyncMcpElicitationProvider:112[0;39m - No elicitation methods found
+2026-07-14 15:05:40.935 [main] WARN  o.s.m.p.e.SyncMcpElicitationProvider:112 - No elicitation methods found
+07-14 15:05:40.984 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:59[0;39m - Started XiaozhiApplication in 8.959 seconds (process running for 9.513)
+2026-07-14 15:05:40.984 [main] INFO  c.xiaozhi.XiaozhiApplication:59 - Started XiaozhiApplication in 8.959 seconds (process running for 9.513)
+07-14 15:05:40.992 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:79[0;39m - ==========================================================
+2026-07-14 15:05:40.992 [main] INFO  c.xiaozhi.XiaozhiApplication:79 - ==========================================================
+07-14 15:05:40.992 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:80[0;39m - OTA服务地址: http://192.168.0.198:8091/api/device/ota
+2026-07-14 15:05:40.992 [main] INFO  c.xiaozhi.XiaozhiApplication:80 - OTA服务地址: http://192.168.0.198:8091/api/device/ota
+07-14 15:05:40.992 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:81[0;39m - ==========================================================
+2026-07-14 15:05:40.992 [main] INFO  c.xiaozhi.XiaozhiApplication:81 - ==========================================================

@@ -14,12 +14,15 @@ avatar/
 /data/
 models/
 *.zip
-*.log
 *.tmp
 *.swp
 *.swo
-*.pid
 .vite
+
+# logs/ 目录下的 log 和 pid 文件需要纳入版本控制（强制不忽略）
+!logs/
+!logs/*.log
+!logs/*.pid
 
 # 忽略 IDE 相关文件
 .idea/
