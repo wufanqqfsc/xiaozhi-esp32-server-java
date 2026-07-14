@@ -1,4 +1,0 @@
-feat(prompt): add shake-to-divination rules to JARVIS prompt
-
-- Update JARVIS.md to handle "user shook the device" prompt
-- Instruct LLM to call get_divination_result and search_and_display_gif

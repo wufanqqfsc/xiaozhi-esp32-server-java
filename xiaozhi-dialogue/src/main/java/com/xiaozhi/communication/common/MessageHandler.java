@@ -467,6 +467,23 @@ public class MessageHandler {
         }
     }
 
+    private void handleUserPromptMessage(ChatSession chatSession, UserPromptMessage message) {
+        String sessionId = chatSession.getSessionId();
+        log.info("收到 user_prompt 消息 - SessionId: {}, Text: {}", sessionId, message.getText());
+
+        if (aecService != null) aecService.initSession(sessionId);
+
+        Player player = chatSession.getPlayer();
+        if (player != null) {
+            String abortDeviceId = chatSession.getDevice() != null ? chatSession.getDevice().getDeviceId() : null;
+            applicationContext.publishEvent(new ChatAbortedEvent(this, chatSession.getSessionId(), abortDeviceId, "user_prompt"));
+        }
+
+        sessionManager.updateLastActivity(sessionId);
+        personaFactory.buildPersona(chatSession);
+        dialogueService.handleText(chatSession, SttResult.textOnly(message.getText()));
+    }
+
     public void handleMessage(Message msg, String sessionId) {
         var chatSession = sessionManager.getSession(sessionId);
         switch (msg) {
@@ -475,6 +492,7 @@ public class MessageHandler {
             case AbortMessage m -> handleAbortMessage(chatSession, m);
             case GoodbyeMessage m -> handleGoodbyeMessage(chatSession, m);
             case DeviceMcpMessage m -> handleDeviceMcpMessage(chatSession, m);
+            case UserPromptMessage m -> handleUserPromptMessage(chatSession, m);
             default -> {
             }
         }
