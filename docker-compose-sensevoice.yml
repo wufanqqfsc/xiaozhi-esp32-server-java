@@ -17,7 +17,7 @@ services:
           cpus: '7.0'
           memory: 6G
         reservations:
-          cpus: '4.0'
+          cpus: '7.0'
           memory: 4G
     networks:
       - sensevoice-network
