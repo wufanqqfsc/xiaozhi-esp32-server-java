@@ -15,7 +15,9 @@ import org.springframework.ai.chat.messages.UserMessage;
 import com.xiaozhi.dialogue.audio.VadService.VadStatus;
 import com.xiaozhi.dialogue.playback.Player;
 import com.xiaozhi.dialogue.runtime.Persona;
+import com.xiaozhi.dialogue.divination.DivinationSessionHelper;
 import com.xiaozhi.enums.DeviceState;
+import com.xiaozhi.enums.SessionInteractionMode;
 import com.xiaozhi.event.ChatAbortedEvent;
 import com.xiaozhi.event.SpeechRecognizedEvent;
 
@@ -32,6 +34,7 @@ import jakarta.annotation.Resource;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import lombok.extern.slf4j.Slf4j;
 /**
@@ -48,6 +51,15 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class DialogueService{
     private static final String ABORT_REASON_VAD = "检测到vad";
+
+    /** T12: JARVIS 唤醒菜单数字选择（1-8 / 中文数字） */
+    private static final Pattern JARVIS_MENU_SELECTION = Pattern.compile(
+            "^(?:[1-8]|一|二|三|四|五|六|七|八)$");
+
+    private static final String[] JARVIS_MENU_LABELS = {
+            "今日运势", "财运测算", "事业运势", "感情运势",
+            "黄历宜忌", "健康运势", "出行吉日", "贵人运势"
+    };
 
     @Resource
     private PersonaFactory personaFactory;
@@ -221,6 +233,7 @@ public class DialogueService{
     public void handleWakeWord(ChatSession session, String text) {
         log.info("检测到唤醒词: {}", text);
         try {
+            DivinationSessionHelper.onWakeWord(session);
             // 设置为 SPEAKING 状态，在唤醒响应期间忽略 VAD 检测
             session.transitionTo(DeviceState.SPEAKING);
 
@@ -247,7 +260,19 @@ public class DialogueService{
 
             String text = sttResult.text();
 
-            UserMessage userMessage = buildUserMessage(text, sttResult);
+            // T17: 跑马灯期间用户继续说话 → 注入等待提示
+            if (session.getInteractionMode() == SessionInteractionMode.DIVINATION_ACTIVE) {
+                text = text + "\n" + DivinationSessionHelper.buildMarqueeBusyHint();
+            }
+
+            // T12: 链路 B 菜单选数字后注入占卜启动提示，降低 LLM 漏调 start_divination 概率
+            String divinationHint = buildJarvisDivinationMenuHint(text);
+            if (divinationHint != null) {
+                DivinationSessionHelper.onMenuSelection(session);
+            }
+            String messageText = divinationHint != null ? text + "\n" + divinationHint : text;
+
+            UserMessage userMessage = buildUserMessage(messageText, sttResult);
 
             // 意图检测
             if (intentService.detect(text) == IntentService.Intent.EXIT) {
@@ -265,6 +290,47 @@ public class DialogueService{
         } catch (Exception e) {
             log.error("处理文本失败: {}", e.getMessage(), e);
         }
+    }
+
+    /**
+     * T12: 用户唤醒后说出 1-8 时，附加一次性系统提示，引导 LLM 调用 start_divination。
+     */
+    private static String buildJarvisDivinationMenuHint(String text) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        String trimmed = text.trim();
+        if (!JARVIS_MENU_SELECTION.matcher(trimmed).matches()) {
+            return null;
+        }
+        int choice = parseJarvisMenuChoice(trimmed);
+        if (choice < 1 || choice > JARVIS_MENU_LABELS.length) {
+            return null;
+        }
+        String label = JARVIS_MENU_LABELS[choice - 1];
+        return String.format(
+                "[系统提示] 先生已通过 JARVIS 菜单选择了 %d.%s。"
+                        + "请先按 JARVIS 确认话术口头回应，然后必须调用 self.attitude.start_divination 启动设备占卜跑马灯；"
+                        + "跑马灯结束后调用 self.attitude.get_divination_result 获取结果，"
+                        + "再 search_and_display_gif 并播报完整运势（综合→财运→桃花→爱情）。",
+                choice, label);
+    }
+
+    private static int parseJarvisMenuChoice(String trimmed) {
+        if (trimmed.length() == 1 && trimmed.charAt(0) >= '1' && trimmed.charAt(0) <= '8') {
+            return trimmed.charAt(0) - '0';
+        }
+        return switch (trimmed) {
+            case "一" -> 1;
+            case "二" -> 2;
+            case "三" -> 3;
+            case "四" -> 4;
+            case "五" -> 5;
+            case "六" -> 6;
+            case "七" -> 7;
+            case "八" -> 8;
+            default -> -1;
+        };
     }
 
     /**

@@ -9,6 +9,7 @@ import com.xiaozhi.dialogue.runtime.DialogueContext;
 import com.xiaozhi.dialogue.playback.Player;
 import com.xiaozhi.enums.DeviceState;
 import com.xiaozhi.enums.ListenMode;
+import com.xiaozhi.enums.SessionInteractionMode;
 import com.xiaozhi.utils.AudioUtils;
 import com.xiaozhi.dialogue.runtime.Persona;
 import lombok.Data;
@@ -56,6 +57,14 @@ public abstract class ChatSession {
      * 只有 IDLE 状态才允许触发不活跃超时。
      */
     private volatile DeviceState deviceState = DeviceState.IDLE;
+
+    /**
+     * T13: 会话交互模式（JARVIS 菜单 / 占卜跑马灯 / 摇一摇等）。
+     */
+    private volatile SessionInteractionMode interactionMode = SessionInteractionMode.IDLE;
+
+    /** T18: 本轮占卜是否已通过 get_divination_result 获取设备端结果 */
+    private volatile boolean divinationResultFetched = false;
 
     /**
      * 状态转换方法

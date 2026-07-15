@@ -11,6 +11,7 @@ import com.xiaozhi.device.service.DeviceService;
 import com.xiaozhi.communication.message.MessageSender;
 import com.xiaozhi.dialogue.DialogueService;
 import com.xiaozhi.dialogue.audio.AecService;
+import com.xiaozhi.dialogue.divination.DivinationSessionHelper;
 import com.xiaozhi.ai.stt.SttResult;
 import com.xiaozhi.dialogue.llm.factory.PersonaFactory;
 import com.xiaozhi.ai.llm.factory.ChatModelFactory;
@@ -393,8 +394,14 @@ public class MessageHandler {
             case ListenState.Text:
                 // 检测聊天文本输入 — 确保 AEC 在 TTS 开始前已初始化
                 if (aecService != null) aecService.initSession(sessionId);
+                String listenText = message.getText();
+                boolean shakePrompt = DivinationSessionHelper.isShakeDevicePrompt(listenText);
+                if (shakePrompt) {
+                    DivinationSessionHelper.onShakePrompt(chatSession);
+                }
                 Player player = chatSession.getPlayer();
-                if (player != null ) {
+                // 摇一摇 hidden prompt 不 abort，避免设备端收到空 tts:stop 提前结束占卜
+                if (player != null && !shakePrompt) {
                     String modeValue = message.getMode() != null ? message.getMode().getValue() : null;
                     String abortDeviceId = chatSession.getDevice() != null ? chatSession.getDevice().getDeviceId() : null;
                     applicationContext.publishEvent(new ChatAbortedEvent(this, chatSession.getSessionId(), abortDeviceId, modeValue));
@@ -402,9 +409,9 @@ public class MessageHandler {
                 // 确保 Persona 存在、通知设备、更新活跃时间
                 sessionManager.updateLastActivity(sessionId);
                 personaFactory.buildPersona(chatSession);
-                messageService.sendSttMessage(chatSession, message.getText());
-                log.info("处理聊天文字输入: \"{}\"", message.getText());
-                dialogueService.handleText(chatSession, SttResult.textOnly(message.getText()));
+                messageService.sendSttMessage(chatSession, listenText);
+                log.info("处理聊天文字输入: \"{}\" (interactionMode={})", listenText, chatSession.getInteractionMode());
+                dialogueService.handleText(chatSession, SttResult.textOnly(listenText));
                 break;
 
             case ListenState.Detect:

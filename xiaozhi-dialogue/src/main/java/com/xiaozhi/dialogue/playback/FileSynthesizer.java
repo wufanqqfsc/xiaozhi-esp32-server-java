@@ -6,8 +6,8 @@ import com.xiaozhi.communication.common.ChatSession;
 import com.xiaozhi.ai.tts.SentenceHelper;
 import com.xiaozhi.ai.tts.TtsService;
 import com.xiaozhi.dialogue.llm.tool.mcp.device.DeviceMcpService;
+import com.xiaozhi.dialogue.divination.DivinationSessionHelper;
 import com.xiaozhi.utils.AudioUtils;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import reactor.core.Disposable;
@@ -16,7 +16,6 @@ import reactor.core.publisher.Flux;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -39,11 +38,12 @@ public class FileSynthesizer extends Synthesizer {
 
     private volatile Disposable llmDisposable;
 
-    @Resource
-    private DeviceMcpService deviceMcpService;
+    private final DeviceMcpService deviceMcpService;
 
-    public FileSynthesizer(ChatSession session, TtsService ttsService, Player player) {
+    public FileSynthesizer(ChatSession session, TtsService ttsService, Player player,
+                           DeviceMcpService deviceMcpService) {
         super(session, ttsService, player);
+        this.deviceMcpService = deviceMcpService;
     }
 
     @Override
@@ -67,7 +67,9 @@ public class FileSynthesizer extends Synthesizer {
             handleToolMarker(toolName, arguments);
         });
 
-        llmDisposable = sentenceHelper.convert(stringFlux).subscribe(result -> {
+        llmDisposable = sentenceHelper.convert(stringFlux)
+                .doOnComplete(() -> DivinationSessionHelper.maybeAppendDivinationClosing(this, chatSession))
+                .subscribe(result -> {
             String rawText = result.text();
             String mood = result.mood();
             if (rawText != null) {
@@ -77,6 +79,7 @@ public class FileSynthesizer extends Synthesizer {
                 log.debug("句子在清洗标签后为空，跳过TTS - SessionId: {}", chatSession.getSessionId());
                 return;
             }
+            DivinationSessionHelper.maybeForceGetDivinationResult(chatSession, rawText, deviceMcpService);
             final String text = rawText;
             Flux<Speech> lazyTtsFlux = Flux.create(sink -> {
                 try {
@@ -130,6 +133,7 @@ public class FileSynthesizer extends Synthesizer {
 
             String result = callDeviceMcpTool(deviceId, toolName, argsMap);
             chatSession.addToolCallDetail(toolName, toolArgs, result);
+            DivinationSessionHelper.onToolInvoked(chatSession, toolName);
             log.info("[TOOL_MARKER] 工具执行成功 - tool={}, result={}, sessionId={}",
                     toolName, result, chatSession.getSessionId());
 

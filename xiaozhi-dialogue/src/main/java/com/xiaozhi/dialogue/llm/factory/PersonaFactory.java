@@ -69,6 +69,8 @@ public class PersonaFactory {
     private DialogueListener dialogueListener;
     @Resource
     private StorageServiceFactory storageServiceFactory;
+    @Resource
+    private SynthesizerFactory synthesizerFactory;
 
     /**
      * 构建完整的 Persona 实例。
@@ -180,7 +182,7 @@ public class PersonaFactory {
         String voiceName = role.getVoiceName();
         TtsService ttsService = ttsFactory.getTtsService(ttsConfig, voiceName, role.getTtsPitch(), role.getTtsSpeed());
 
-        return SynthesizerFactory.create(session, ttsService, player);
+        return synthesizerFactory.create(session, ttsService, player);
 
     }
 

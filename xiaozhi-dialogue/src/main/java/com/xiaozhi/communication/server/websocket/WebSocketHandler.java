@@ -93,6 +93,9 @@ public class WebSocketHandler extends AbstractWebSocketHandler {
         } catch (Exception e) {
             log.error("handleTextMessage处理失败", e);
         }
+        if (chatSession != null && log.isDebugEnabled()) {
+            log.debug("WS sessionId={} interactionMode={}", sessionId, chatSession.getInteractionMode());
+        }
     }
 
     @Override
