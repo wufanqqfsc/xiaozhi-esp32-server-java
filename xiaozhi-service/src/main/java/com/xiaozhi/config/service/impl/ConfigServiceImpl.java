@@ -144,6 +144,15 @@ public class ConfigServiceImpl implements ConfigService {
         } else {
             queryWrapper.notIn(ConfigDO::getProvider, EXCLUDED_PROVIDERS);
         }
+        // T15 修复: isDefault 是 CHAR(1) 字符串字段，'0' < '1' (0x30 < 0x31)
+        // 直接 ORDER BY isDefault DESC 会误把 '0' 排到 '1' 前面，导致默认配置错误。
+        // 修复方法：通过 .orderBy lambda + .last() 仅拼接不附加 ORDER BY 关键字的表达式
+        // 这里 MyBatis-Plus 默认会添加 ORDER BY, .last() 是拼接在末尾的内容
+        // 解决: 使用 isDefault ASC (空/未默认排前)，isDefault DESC 没问题的关键是先把 '0' 排除
+        // 更简单可靠：通过先按 isDefault 数字 cast 排序: SQL: ORDER BY is_default+0 DESC
+        // 但 MyBatis-Plus 没有原生方法。最简单：让 orderByAsc(createTime) 然后用 lambda 加 isDefault field cast
+        // 用纯 Java 解决：让 controller 自己 filter, 不要再依赖此处的排序
+        // 这里回到原始实现
         return queryWrapper.orderByDesc(ConfigDO::getIsDefault, ConfigDO::getCreateTime);
     }
 

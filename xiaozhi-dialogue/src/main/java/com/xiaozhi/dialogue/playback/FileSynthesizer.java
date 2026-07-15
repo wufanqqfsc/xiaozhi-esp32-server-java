@@ -5,17 +5,23 @@ import com.xiaozhi.common.Speech;
 import com.xiaozhi.communication.common.ChatSession;
 import com.xiaozhi.ai.tts.SentenceHelper;
 import com.xiaozhi.ai.tts.TtsService;
+import com.xiaozhi.dialogue.llm.tool.mcp.device.DeviceMcpService;
 import com.xiaozhi.utils.AudioUtils;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.xiaozhi.common.utils.LatencyTracer;
 
-import lombok.extern.slf4j.Slf4j;
 /**
  * 语音合成器，用于非流式TTS（先生成完整音频文件再播放）。
  * 适用于不支持流式输出的TTS Provider（如 SherpaOnnx）。
@@ -25,17 +31,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class FileSynthesizer extends Synthesizer {
 
-    /**
-     * 思考标签正则：用于在分句后、送 TTS 之前的兜底清洗。
-     * 覆盖 Persona.convert() 已过滤的场景之外的边界情况（如标签变体、
-     * 部分模型在工具调用或系统提示中内联 <think> 等）。
-     * DOTALL + 不区分大小写 + 含首尾空白，避免 TTS 把"让我想想..."念出来。
-     */
     private static final Pattern THINK_TAG_PATTERN =
             Pattern.compile("(?is)\\s*<think>.*?</think>\\s*");
 
-    // 保存LLM输出流的订阅引用，以便在cancel时取消上游订阅
+    private static final Pattern TOOL_MARKER_ARG_PATTERN =
+            Pattern.compile("^(.+?)\\s*[{].*[}]$", Pattern.DOTALL);
+
     private volatile Disposable llmDisposable;
+
+    @Resource
+    private DeviceMcpService deviceMcpService;
 
     public FileSynthesizer(ChatSession session, TtsService ttsService, Player player) {
         super(session, ttsService, player);
@@ -53,25 +58,23 @@ public class FileSynthesizer extends Synthesizer {
         return llmDisposable != null && !llmDisposable.isDisposed();
     }
 
-    /**
-     * 将LLM输出的token流转化为语音并推送到播放器。
-     * 使用 SentenceHelper 按标点分句，逐句调用TTS生成完整音频文件后交给播放器。
-     *
-     * @param stringFlux LLM输出的token流
-     */
     @Override
     public void synthesize(Flux<String> stringFlux) {
-        // 每轮合成前重置该阶段计时，避免后续 mark 出现 ORPHAN。
         LatencyTracer.start(chatSession.getSessionId(), "TTS_FIRST_CHUNK");
-        llmDisposable = new SentenceHelper().convert(stringFlux).subscribe(result -> {
+
+        SentenceHelper sentenceHelper = new SentenceHelper();
+        sentenceHelper.setToolMarkerCallback((toolName, arguments) -> {
+            handleToolMarker(toolName, arguments);
+        });
+
+        llmDisposable = sentenceHelper.convert(stringFlux).subscribe(result -> {
             String rawText = result.text();
             String mood = result.mood();
-            // TTS 兜底：去除 <think>...</think> 标签，避免把思考过程念成语音
             if (rawText != null) {
                 rawText = THINK_TAG_PATTERN.matcher(rawText).replaceAll("").trim();
             }
             if (rawText == null || rawText.isEmpty()) {
-                log.debug("句子在清洗 think 标签后为空，跳过 TTS - SessionId: {}", chatSession.getSessionId());
+                log.debug("句子在清洗标签后为空，跳过TTS - SessionId: {}", chatSession.getSessionId());
                 return;
             }
             final String text = rawText;
@@ -85,7 +88,6 @@ public class FileSynthesizer extends Synthesizer {
                             sink.next(first ? new Speech(chunk, text).withMood(mood) : new Speech(chunk));
                             first = false;
                         }
-                        // 首个有效 TTS 音频块出队时打点。
                         LatencyTracer.mark(chatSession.getSessionId(), "TTS_FIRST_CHUNK");
                     } else {
                         log.error("TTS服务返回空音频文件 - SessionId: {}", chatSession.getSessionId());
@@ -99,21 +101,76 @@ public class FileSynthesizer extends Synthesizer {
         });
     }
 
-    /**
-     * 直接合成单个文本
-     * @param text 待合成的文本
-     */
+    private void handleToolMarker(String rawContent, String arguments) {
+        String toolName = rawContent.trim();
+        String toolArgs = "";
+        Matcher m = TOOL_MARKER_ARG_PATTERN.matcher(toolName);
+        if (m.matches()) {
+            toolName = m.group(1).trim();
+            toolArgs = m.group(2);
+        }
+
+        log.info("[TOOL_MARKER] 检测到工具调用标记 - tool={}, args={}, sessionId={}",
+                toolName, toolArgs, chatSession.getSessionId());
+
+        try {
+            String deviceId = chatSession.getDevice() != null
+                    ? chatSession.getDevice().getDeviceId().replace(":", "-")
+                    : null;
+
+            if (deviceId == null) {
+                log.warn("[TOOL_MARKER] 设备未连接，无法执行工具: {}", toolName);
+                chatSession.addToolCallDetail(toolName, toolArgs, "设备未连接");
+                return;
+            }
+
+            Map<String, Object> argsMap = StringUtils.hasText(toolArgs)
+                    ? parseJsonArgs(toolArgs)
+                    : Map.of();
+
+            String result = callDeviceMcpTool(deviceId, toolName, argsMap);
+            chatSession.addToolCallDetail(toolName, toolArgs, result);
+            log.info("[TOOL_MARKER] 工具执行成功 - tool={}, result={}, sessionId={}",
+                    toolName, result, chatSession.getSessionId());
+
+        } catch (Exception e) {
+            log.error("[TOOL_MARKER] 工具执行失败 - tool={}, error={}, sessionId={}",
+                    toolName, e.getMessage(), chatSession.getSessionId());
+            chatSession.addToolCallDetail(toolName, toolArgs, "工具执行失败: " + e.getMessage());
+        }
+    }
+
+    private String callDeviceMcpTool(String deviceId, String toolName, Map<String, Object> args) {
+        try {
+            Map<String, Object> resultMap = deviceMcpService.callDeviceTool(deviceId, toolName, args);
+            return resultMap != null ? resultMap.toString() : "null";
+        } catch (IllegalStateException e) {
+            if (e.getMessage() != null && e.getMessage().contains("设备离线")) {
+                throw e;
+            }
+            return "工具调用异常: " + e.getMessage();
+        }
+    }
+
+    private Map<String, Object> parseJsonArgs(String json) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.readValue(json, Map.class);
+        } catch (Exception e) {
+            log.warn("[TOOL_MARKER] JSON参数解析失败: {}", json);
+            return Map.of();
+        }
+    }
+
     @Override
     public void synthesize(String text) {
-        // TTS 兜底：去除 <think>...</think> 标签（针对非流式路径）
         if (text != null) {
             text = THINK_TAG_PATTERN.matcher(text).replaceAll("").trim();
         }
         if (text == null || text.isEmpty()) {
-            log.debug("文本在清洗 think 标签后为空，跳过 TTS - SessionId: {}", chatSession.getSessionId());
+            log.debug("文本在清洗think标签后为空，跳过TTS - SessionId: {}", chatSession.getSessionId());
             return;
         }
-        // 委托给 synthesize(Flux) 处理，缓存指标在那里统一记录
         synthesize(Flux.just(text));
     }
 

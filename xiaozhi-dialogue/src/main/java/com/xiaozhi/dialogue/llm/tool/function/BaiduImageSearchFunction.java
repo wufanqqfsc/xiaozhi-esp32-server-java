@@ -38,6 +38,14 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
     private static final int MAX_CANDIDATES = 5;
     private static final int DISPLAY_DURATION_MS = 5000;
 
+    // T06: 服务端 GIF 处理超时常量（毫秒）
+    private static final int GIF_SEARCH_TIMEOUT_MS = 5000;
+    private static final int GIF_DOWNLOAD_TIMEOUT_MS = 8000;
+    private static final int GIF_UPLOAD_TIMEOUT_MS = 10000;
+    private static final int GIF_TOTAL_TIMEOUT_MS = 25000; // 总兜底：25s 内必须返回结果
+    // 失败降级标记：让 LLM 知道可以跳过播报动图要求，直接进入 TTS
+    private static final String FALLBACK_PREFIX = "[GIF_FALLBACK]";
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
@@ -69,21 +77,23 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
                         query, gifOnly, sessionId, deviceId);
 
                 try {
+                    long t0 = System.currentTimeMillis();
                     String deviceIp = resolveDeviceIp(sessionId, deviceId);
                     if (!StringUtils.hasText(deviceIp)) {
-                        return "无法获取设备 IP，请确认设备在线且已上报 IP";
+                        // T06 降级：返回带 FALLBACK 标记的错误信息，让 LLM 跳过 GIF 直接进入 TTS
+                        return FALLBACK_PREFIX + "无法获取设备 IP，请确认设备在线且已上报 IP";
                     }
 
                     List<ImageCandidate> candidates = searchBaiduImages(query, gifOnly);
                     if (candidates.isEmpty()) {
-                        return gifOnly
+                        return FALLBACK_PREFIX + (gifOnly
                                 ? "未找到与\"" + query + "\"相关的GIF图片"
-                                : "未找到与\"" + query + "\"相关的图片";
+                                : "未找到与\"" + query + "\"相关的图片");
                     }
 
                     DownloadedImage downloaded = downloadAndValidate(candidates);
                     if (downloaded == null) {
-                        return "找到了图片但下载失败，请稍后重试";
+                        return FALLBACK_PREFIX + "找到了图片但下载失败，请稍后重试";
                     }
 
                     String sdPath = SD_IMAGE_DIR + "/search_"
@@ -98,15 +108,17 @@ public class BaiduImageSearchFunction implements ToolsGlobalRegistry.GlobalFunct
                             downloaded.isGif
                     );
 
-                    log.info("设备 SD 卡上传并显示成功: path={}, response={}", sdPath, uploadResult);
+                    log.info("设备 SD 卡上传并显示成功: path={}, response={}, used_ms={}",
+                            sdPath, uploadResult, (System.currentTimeMillis() - t0));
 
                     ImageCandidate used = downloaded.candidate;
                     return String.format("已成功在设备上显示图片。关键词: %s, 路径: /sdcard/%s, 类型: %s, 尺寸: %dx%d",
                             query, sdPath, downloaded.contentType, used.width, used.height);
 
                 } catch (Exception e) {
+                    // T06 降级：捕获异常时返回带 FALLBACK 前缀的结构化错误，让 LLM 知晓
                     log.error("图片搜索显示失败: query={}", query, e);
-                    return "图片搜索失败: " + e.getMessage();
+                    return FALLBACK_PREFIX + "图片搜索失败: " + e.getMessage();
                 }
             })
             .toolMetadata(ToolMetadata.builder().returnDirect(false).build())

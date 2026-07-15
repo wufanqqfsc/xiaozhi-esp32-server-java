@@ -42,7 +42,23 @@ public class SentenceHelper implements ChatConverter {
     private boolean insideThink = false;
     private final StringBuilder thinkBuffer = new StringBuilder();
 
-    public SentenceHelper() {
+    public interface ToolMarkerCallback {
+        void onToolMarker(String toolName, String arguments);
+    }
+
+    private ToolMarkerCallback toolMarkerCallback;
+    private final StringBuilder toolMarkerBuffer = new StringBuilder();
+    private boolean insideToolMarker = false;
+    private static final String TOOL_MARKER_START = "【调用工具】";
+    private static final String TOOL_MARKER_END = "【/调用工具】";
+
+    public void setToolMarkerCallback(ToolMarkerCallback callback) {
+        this.toolMarkerCallback = callback;
+    }
+
+    public void resetToolMarkerState() {
+        this.toolMarkerBuffer.setLength(0);
+        this.insideToolMarker = false;
     }
 
     public List<SentenceResult> take(String token) {
@@ -54,7 +70,22 @@ public class SentenceHelper implements ChatConverter {
         StringBuilder contentBuffer = new StringBuilder();
         int i = 0;
         while (i < token.length()) {
-            if (insideThink) {
+            if (insideToolMarker) {
+                int endPos = token.indexOf(TOOL_MARKER_END, i);
+                if (endPos >= 0) {
+                    toolMarkerBuffer.append(token, i, endPos);
+                    i = endPos + TOOL_MARKER_END.length();
+                    insideToolMarker = false;
+                    String rawToolContent = toolMarkerBuffer.toString().trim();
+                    toolMarkerBuffer.setLength(0);
+                    if (toolMarkerCallback != null && !rawToolContent.isEmpty()) {
+                        toolMarkerCallback.onToolMarker(rawToolContent, "");
+                    }
+                } else {
+                    toolMarkerBuffer.append(token.substring(i));
+                    i = token.length();
+                }
+            } else if (insideThink) {
                 int endTagPos = token.indexOf(THINK_END_TAG, i);
                 if (endTagPos >= 0) {
                     thinkBuffer.append(token.substring(i, endTagPos));
@@ -66,12 +97,20 @@ public class SentenceHelper implements ChatConverter {
                     i = token.length();
                 }
             } else {
-                int startTagPos = token.indexOf(THINK_START_TAG, i);
-                if (startTagPos >= 0) {
-                    if (startTagPos > i) {
-                        contentBuffer.append(token.substring(i, startTagPos));
+                int toolStartPos = token.indexOf(TOOL_MARKER_START, i);
+                int thinkStartPos = token.indexOf(THINK_START_TAG, i);
+
+                if (toolStartPos >= 0 && (thinkStartPos < 0 || toolStartPos <= thinkStartPos)) {
+                    if (toolStartPos > i) {
+                        contentBuffer.append(token.substring(i, toolStartPos));
                     }
-                    i = startTagPos + THINK_START_TAG.length();
+                    i = toolStartPos + TOOL_MARKER_START.length();
+                    insideToolMarker = true;
+                } else if (thinkStartPos >= 0) {
+                    if (thinkStartPos > i) {
+                        contentBuffer.append(token.substring(i, thinkStartPos));
+                    }
+                    i = thinkStartPos + THINK_START_TAG.length();
                     insideThink = true;
                 } else {
                     contentBuffer.append(token.substring(i));

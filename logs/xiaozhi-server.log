@@ -9,17 +9,17 @@ Standard Commons Logging discovery in action with spring-jcl: please remove comm
 
  :: Spring Boot ::                (v3.5.8)
 
-07-14 15:23:47.618 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:53[0;39m - Starting XiaozhiApplication v5.0.0 using Java 25.0.2 with PID 86885 (/Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/xiaozhi-server/target/xiaozhi-server-5.0.0.jar started by sfan in /Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java)
-2026-07-14 15:23:47.618 [main] INFO  c.xiaozhi.XiaozhiApplication:53 - Starting XiaozhiApplication v5.0.0 using Java 25.0.2 with PID 86885 (/Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/xiaozhi-server/target/xiaozhi-server-5.0.0.jar started by sfan in /Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java)
-07-14 15:23:47.620 [main] [39mDEBUG[0;39m [36mc.xiaozhi.XiaozhiApplication:54[0;39m - Running with Spring Boot v3.5.8, Spring v6.2.14
-2026-07-14 15:23:47.620 [main] DEBUG c.xiaozhi.XiaozhiApplication:54 - Running with Spring Boot v3.5.8, Spring v6.2.14
-07-14 15:23:47.621 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:658[0;39m - The following 1 profile is active: "dev"
-2026-07-14 15:23:47.621 [main] INFO  c.xiaozhi.XiaozhiApplication:658 - The following 1 profile is active: "dev"
-07-14 15:23:48.794 [main] [39mTRACE[0;39m [36mo.s.a.m.c.c.a.McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition:84[0;39m - Condition McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition on org.springframework.ai.mcp.client.common.autoconfigure.McpToolCallbackAutoConfiguration matched due to AllNestedConditions 2 matched 0 did not; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.ToolCallbackProviderEnabled @ConditionalOnProperty (spring.ai.mcp.client.toolcallback.enabled=true) matched; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.McpAutoConfigEnabled @ConditionalOnProperty (spring.ai.mcp.client.enabled=true) matched
-2026-07-14 15:23:48.794 [main] TRACE o.s.a.m.c.c.a.McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition:84 - Condition McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition on org.springframework.ai.mcp.client.common.autoconfigure.McpToolCallbackAutoConfiguration matched due to AllNestedConditions 2 matched 0 did not; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.ToolCallbackProviderEnabled @ConditionalOnProperty (spring.ai.mcp.client.toolcallback.enabled=true) matched; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.McpAutoConfigEnabled @ConditionalOnProperty (spring.ai.mcp.client.enabled=true) matched
+07-15 07:15:11.305 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:53[0;39m - Starting XiaozhiApplication v5.0.0 using Java 25.0.2 with PID 2884 (/Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/xiaozhi-server/target/xiaozhi-server-5.0.0.jar started by sfan in /Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java)
+2026-07-15 07:15:11.305 [main] INFO  c.xiaozhi.XiaozhiApplication:53 - Starting XiaozhiApplication v5.0.0 using Java 25.0.2 with PID 2884 (/Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/xiaozhi-server/target/xiaozhi-server-5.0.0.jar started by sfan in /Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java)
+07-15 07:15:11.308 [main] [39mDEBUG[0;39m [36mc.xiaozhi.XiaozhiApplication:54[0;39m - Running with Spring Boot v3.5.8, Spring v6.2.14
+2026-07-15 07:15:11.308 [main] DEBUG c.xiaozhi.XiaozhiApplication:54 - Running with Spring Boot v3.5.8, Spring v6.2.14
+07-15 07:15:11.309 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:658[0;39m - The following 1 profile is active: "dev"
+2026-07-15 07:15:11.309 [main] INFO  c.xiaozhi.XiaozhiApplication:658 - The following 1 profile is active: "dev"
+07-15 07:15:12.417 [main] [39mTRACE[0;39m [36mo.s.a.m.c.c.a.McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition:84[0;39m - Condition McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition on org.springframework.ai.mcp.client.common.autoconfigure.McpToolCallbackAutoConfiguration matched due to AllNestedConditions 2 matched 0 did not; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.ToolCallbackProviderEnabled @ConditionalOnProperty (spring.ai.mcp.client.toolcallback.enabled=true) matched; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.McpAutoConfigEnabled @ConditionalOnProperty (spring.ai.mcp.client.enabled=true) matched
+2026-07-15 07:15:12.417 [main] TRACE o.s.a.m.c.c.a.McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition:84 - Condition McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition on org.springframework.ai.mcp.client.common.autoconfigure.McpToolCallbackAutoConfiguration matched due to AllNestedConditions 2 matched 0 did not; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.ToolCallbackProviderEnabled @ConditionalOnProperty (spring.ai.mcp.client.toolcallback.enabled=true) matched; NestedCondition on McpToolCallbackAutoConfiguration.McpToolCallbackAutoConfigurationCondition.McpAutoConfigEnabled @ConditionalOnProperty (spring.ai.mcp.client.enabled=true) matched
 Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
-07-14 15:23:52.768 [main] [39mDEBUG[0;39m [36mc.x.s.c.SecurityHeaderFilter:240[0;39m - Filter 'securityHeaderFilter' configured for use
-2026-07-14 15:23:52.768 [main] DEBUG c.x.s.c.SecurityHeaderFilter:240 - Filter 'securityHeaderFilter' configured for use
+07-15 07:15:15.707 [main] [39mDEBUG[0;39m [36mc.x.s.c.SecurityHeaderFilter:240[0;39m - Filter 'securityHeaderFilter' configured for use
+2026-07-15 07:15:15.707 [main] DEBUG c.x.s.c.SecurityHeaderFilter:240 - Filter 'securityHeaderFilter' configured for use
 WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
 WARNING: sun.misc.Unsafe::objectFieldOffset has been called by io.netty.util.internal.PlatformDependent0$4 (jar:nested:/Users/sfan/Desktop/cv/github/OpenMAIC/xiaozhi-esp32-server-java/xiaozhi-server/target/xiaozhi-server-5.0.0.jar/!BOOT-INF/lib/netty-common-4.1.110.Final.jar!/)
 WARNING: Please consider reporting this to the maintainers of class io.netty.util.internal.PlatformDependent0$4
@@ -33,31 +33,128 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 | | |\/|_)(_| | |_\  |_)||_|_\ 
      /               |         
                         3.5.16 
-07-14 15:23:55.024 [main] [31mWARN [0;39m [36mc.b.m.c.m.TableInfoHelper:364[0;39m - Can not find table primary key in Class: "com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO".
-2026-07-14 15:23:55.024 [main] WARN  c.b.m.c.m.TableInfoHelper:364 - Can not find table primary key in Class: "com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO".
-07-14 15:23:55.024 [main] [31mWARN [0;39m [36mc.b.m.c.i.DefaultSqlInjector:56[0;39m - class com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO ,Not found @TableId annotation, Cannot use Mybatis-Plus 'xxById' Method.
-2026-07-14 15:23:55.024 [main] WARN  c.b.m.c.i.DefaultSqlInjector:56 - class com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO ,Not found @TableId annotation, Cannot use Mybatis-Plus 'xxById' Method.
-07-14 15:23:55.100 [main] [34mINFO [0;39m [36mc.x.ai.stt.SttServiceFactory:47[0;39m - 正在初始化默认语音识别服务(Vosk)...
-2026-07-14 15:23:55.100 [main] INFO  c.x.ai.stt.SttServiceFactory:47 - 正在初始化默认语音识别服务(Vosk)...
-07-14 15:23:55.112 [main] [34mINFO [0;39m [36mc.x.a.s.p.VoskSttService:83[0;39m - Vosk library loaded for macOS M-series chip.
-2026-07-14 15:23:55.112 [main] INFO  c.x.a.s.p.VoskSttService:83 - Vosk library loaded for macOS M-series chip.
-07-14 15:23:55.795 [main] [31mWARN [0;39m [36mc.x.ai.stt.SttServiceFactory:82[0;39m - Vosk STT服务初始化失败: Error looking up function 'vosk_recognizer_set_grm': dlsym(0x6e0cffc0, vosk_recognizer_set_grm): symbol not found
-2026-07-14 15:23:55.795 [main] WARN  c.x.ai.stt.SttServiceFactory:82 - Vosk STT服务初始化失败: Error looking up function 'vosk_recognizer_set_grm': dlsym(0x6e0cffc0, vosk_recognizer_set_grm): symbol not found
-07-14 15:23:55.797 [main] [31mWARN [0;39m [36mc.x.ai.stt.SttServiceFactory:52[0;39m - 默认语音识别服务(Vosk)初始化失败，将在需要时尝试使用备选服务
-2026-07-14 15:23:55.797 [main] WARN  c.x.ai.stt.SttServiceFactory:52 - 默认语音识别服务(Vosk)初始化失败，将在需要时尝试使用备选服务
+07-15 07:15:17.993 [main] [31mWARN [0;39m [36mc.b.m.c.m.TableInfoHelper:364[0;39m - Can not find table primary key in Class: "com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO".
+2026-07-15 07:15:17.993 [main] WARN  c.b.m.c.m.TableInfoHelper:364 - Can not find table primary key in Class: "com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO".
+07-15 07:15:17.993 [main] [31mWARN [0;39m [36mc.b.m.c.i.DefaultSqlInjector:56[0;39m - class com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO ,Not found @TableId annotation, Cannot use Mybatis-Plus 'xxById' Method.
+2026-07-15 07:15:17.993 [main] WARN  c.b.m.c.i.DefaultSqlInjector:56 - class com.xiaozhi.summary.dal.mysql.dataobject.SummaryDO ,Not found @TableId annotation, Cannot use Mybatis-Plus 'xxById' Method.
+07-15 07:15:18.078 [main] [34mINFO [0;39m [36mc.x.ai.stt.SttServiceFactory:47[0;39m - 正在初始化默认语音识别服务(Vosk)...
+2026-07-15 07:15:18.078 [main] INFO  c.x.ai.stt.SttServiceFactory:47 - 正在初始化默认语音识别服务(Vosk)...
+07-15 07:15:18.092 [main] [34mINFO [0;39m [36mc.x.a.s.p.VoskSttService:83[0;39m - Vosk library loaded for macOS M-series chip.
+2026-07-15 07:15:18.092 [main] INFO  c.x.a.s.p.VoskSttService:83 - Vosk library loaded for macOS M-series chip.
+07-15 07:15:18.334 [main] [31mWARN [0;39m [36mc.x.ai.stt.SttServiceFactory:82[0;39m - Vosk STT服务初始化失败: Error looking up function 'vosk_recognizer_set_grm': dlsym(0x6e0cffc0, vosk_recognizer_set_grm): symbol not found
+2026-07-15 07:15:18.334 [main] WARN  c.x.ai.stt.SttServiceFactory:82 - Vosk STT服务初始化失败: Error looking up function 'vosk_recognizer_set_grm': dlsym(0x6e0cffc0, vosk_recognizer_set_grm): symbol not found
+07-15 07:15:18.336 [main] [31mWARN [0;39m [36mc.x.ai.stt.SttServiceFactory:52[0;39m - 默认语音识别服务(Vosk)初始化失败，将在需要时尝试使用备选服务
+2026-07-15 07:15:18.336 [main] WARN  c.x.ai.stt.SttServiceFactory:52 - 默认语音识别服务(Vosk)初始化失败，将在需要时尝试使用备选服务
 ____ ____    ___ ____ _  _ ____ _  _ 
 [__  |__| __  |  |  | |_/  |___ |\ | 
 ___] |  |     |  |__| | \_ |___ | \| 
 https://sa-token.cc (v1.39.0)
-07-14 15:23:56.645 [main] [31mWARN [0;39m [36mo.s.m.p.s.SyncMcpSamplingProvider:111[0;39m - No sampling methods found
-2026-07-14 15:23:56.645 [main] WARN  o.s.m.p.s.SyncMcpSamplingProvider:111 - No sampling methods found
-07-14 15:23:56.647 [main] [31mWARN [0;39m [36mo.s.m.p.e.SyncMcpElicitationProvider:112[0;39m - No elicitation methods found
-2026-07-14 15:23:56.647 [main] WARN  o.s.m.p.e.SyncMcpElicitationProvider:112 - No elicitation methods found
-07-14 15:23:56.691 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:59[0;39m - Started XiaozhiApplication in 9.978 seconds (process running for 10.567)
-2026-07-14 15:23:56.691 [main] INFO  c.xiaozhi.XiaozhiApplication:59 - Started XiaozhiApplication in 9.978 seconds (process running for 10.567)
-07-14 15:23:56.698 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:79[0;39m - ==========================================================
-2026-07-14 15:23:56.698 [main] INFO  c.xiaozhi.XiaozhiApplication:79 - ==========================================================
-07-14 15:23:56.698 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:80[0;39m - OTA服务地址: http://192.168.0.198:8091/api/device/ota
-2026-07-14 15:23:56.698 [main] INFO  c.xiaozhi.XiaozhiApplication:80 - OTA服务地址: http://192.168.0.198:8091/api/device/ota
-07-14 15:23:56.698 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:81[0;39m - ==========================================================
-2026-07-14 15:23:56.698 [main] INFO  c.xiaozhi.XiaozhiApplication:81 - ==========================================================
+07-15 07:15:19.627 [main] [31mWARN [0;39m [36mo.s.m.p.s.SyncMcpSamplingProvider:111[0;39m - No sampling methods found
+2026-07-15 07:15:19.627 [main] WARN  o.s.m.p.s.SyncMcpSamplingProvider:111 - No sampling methods found
+07-15 07:15:19.629 [main] [31mWARN [0;39m [36mo.s.m.p.e.SyncMcpElicitationProvider:112[0;39m - No elicitation methods found
+2026-07-15 07:15:19.629 [main] WARN  o.s.m.p.e.SyncMcpElicitationProvider:112 - No elicitation methods found
+07-15 07:15:19.688 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:59[0;39m - Started XiaozhiApplication in 9.152 seconds (process running for 9.908)
+2026-07-15 07:15:19.688 [main] INFO  c.xiaozhi.XiaozhiApplication:59 - Started XiaozhiApplication in 9.152 seconds (process running for 9.908)
+07-15 07:15:19.695 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:79[0;39m - ==========================================================
+2026-07-15 07:15:19.695 [main] INFO  c.xiaozhi.XiaozhiApplication:79 - ==========================================================
+07-15 07:15:19.696 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:80[0;39m - OTA服务地址: http://192.168.3.32:8091/api/device/ota
+2026-07-15 07:15:19.696 [main] INFO  c.xiaozhi.XiaozhiApplication:80 - OTA服务地址: http://192.168.3.32:8091/api/device/ota
+07-15 07:15:19.696 [main] [34mINFO [0;39m [36mc.xiaozhi.XiaozhiApplication:81[0;39m - ==========================================================
+2026-07-15 07:15:19.696 [main] INFO  c.xiaozhi.XiaozhiApplication:81 - ==========================================================
+07-15 07:21:08.911 [tomcat-handler-1] [34mINFO [0;39m [36mo.s.w.s.DispatcherServlet:532[0;39m - Initializing Servlet 'dispatcherServlet'
+2026-07-15 07:21:08.911 [tomcat-handler-1] INFO  o.s.w.s.DispatcherServlet:532 - Initializing Servlet 'dispatcherServlet'
+07-15 07:21:08.922 [tomcat-handler-1] [34mINFO [0;39m [36mo.s.w.s.DispatcherServlet:554[0;39m - Completed initialization in 10 ms
+2026-07-15 07:21:08.922 [tomcat-handler-1] INFO  o.s.w.s.DispatcherServlet:554 - Completed initialization in 10 ms
+07-15 07:21:09.431 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.selectList:135[0;39m - ==>  Preparing: SELECT userId,username,password,wxOpenId,wxUnionId,name,avatar,state,isAdmin,authRoleId,tel,email,loginIp,loginTime,createTime,updateTime FROM sys_user WHERE (username = ?) LIMIT 1
+2026-07-15 07:21:09.431 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.selectList:135 - ==>  Preparing: SELECT userId,username,password,wxOpenId,wxUnionId,name,avatar,state,isAdmin,authRoleId,tel,email,loginIp,loginTime,createTime,updateTime FROM sys_user WHERE (username = ?) LIMIT 1
+07-15 07:21:09.447 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.selectList:135[0;39m - ==> Parameters: admin(String)
+2026-07-15 07:21:09.447 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.selectList:135 - ==> Parameters: admin(String)
+07-15 07:21:09.465 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.selectList:135[0;39m - <==      Total: 1
+2026-07-15 07:21:09.465 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.selectList:135 - <==      Total: 1
+07-15 07:21:09.477 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.selectById:135[0;39m - ==>  Preparing: SELECT userId,username,password,wxOpenId,wxUnionId,name,avatar,state,isAdmin,authRoleId,tel,email,loginIp,loginTime,createTime,updateTime FROM sys_user WHERE userId=?
+2026-07-15 07:21:09.477 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.selectById:135 - ==>  Preparing: SELECT userId,username,password,wxOpenId,wxUnionId,name,avatar,state,isAdmin,authRoleId,tel,email,loginIp,loginTime,createTime,updateTime FROM sys_user WHERE userId=?
+07-15 07:21:09.478 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.selectById:135[0;39m - ==> Parameters: 1(Integer)
+2026-07-15 07:21:09.478 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.selectById:135 - ==> Parameters: 1(Integer)
+07-15 07:21:09.481 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.selectById:135[0;39m - <==      Total: 1
+2026-07-15 07:21:09.481 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.selectById:135 - <==      Total: 1
+07-15 07:21:09.485 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.updateById:135[0;39m - ==>  Preparing: UPDATE sys_user SET username=?, password=?, name=?, state=?, isAdmin=?, authRoleId=?, loginIp=?, loginTime=?, createTime=?, updateTime=? WHERE userId=?
+2026-07-15 07:21:09.485 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.updateById:135 - ==>  Preparing: UPDATE sys_user SET username=?, password=?, name=?, state=?, isAdmin=?, authRoleId=?, loginIp=?, loginTime=?, createTime=?, updateTime=? WHERE userId=?
+07-15 07:21:09.486 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.updateById:135[0;39m - ==> Parameters: admin(String), 11cd9c061d614dcf37ec60c44c11d2ad(String), 小智(String), 1(String), 1(String), 1(Integer), 0:0:0:0:0:0:0:1(String), 2026-07-15T07:21:09.468966(LocalDateTime), 2025-03-09T18:32:29(LocalDateTime), 2025-03-09T18:32:35(LocalDateTime), 1(Integer)
+2026-07-15 07:21:09.486 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.updateById:135 - ==> Parameters: admin(String), 11cd9c061d614dcf37ec60c44c11d2ad(String), 小智(String), 1(String), 1(String), 1(Integer), 0:0:0:0:0:0:0:1(String), 2026-07-15T07:21:09.468966(LocalDateTime), 2025-03-09T18:32:29(LocalDateTime), 2025-03-09T18:32:35(LocalDateTime), 1(Integer)
+07-15 07:21:09.492 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.updateById:135[0;39m - <==    Updates: 1
+2026-07-15 07:21:09.492 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.updateById:135 - <==    Updates: 1
+07-15 07:21:09.743 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.selectById:135[0;39m - ==>  Preparing: SELECT userId,username,password,wxOpenId,wxUnionId,name,avatar,state,isAdmin,authRoleId,tel,email,loginIp,loginTime,createTime,updateTime FROM sys_user WHERE userId=?
+2026-07-15 07:21:09.743 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.selectById:135 - ==>  Preparing: SELECT userId,username,password,wxOpenId,wxUnionId,name,avatar,state,isAdmin,authRoleId,tel,email,loginIp,loginTime,createTime,updateTime FROM sys_user WHERE userId=?
+07-15 07:21:09.744 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.selectById:135[0;39m - ==> Parameters: 1(Integer)
+2026-07-15 07:21:09.744 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.selectById:135 - ==> Parameters: 1(Integer)
+07-15 07:21:09.746 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.u.d.m.m.U.selectById:135[0;39m - <==      Total: 1
+2026-07-15 07:21:09.746 [tomcat-handler-1] DEBUG c.x.u.d.m.m.U.selectById:135 - <==      Total: 1
+07-15 07:21:09.749 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.a.d.m.m.A.selectById:135[0;39m - ==>  Preparing: SELECT authRoleId,authRoleName,roleKey,description,status,createTime,updateTime FROM sys_auth_role WHERE authRoleId=?
+2026-07-15 07:21:09.749 [tomcat-handler-1] DEBUG c.x.a.d.m.m.A.selectById:135 - ==>  Preparing: SELECT authRoleId,authRoleName,roleKey,description,status,createTime,updateTime FROM sys_auth_role WHERE authRoleId=?
+07-15 07:21:09.750 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.a.d.m.m.A.selectById:135[0;39m - ==> Parameters: 1(Integer)
+2026-07-15 07:21:09.750 [tomcat-handler-1] DEBUG c.x.a.d.m.m.A.selectById:135 - ==> Parameters: 1(Integer)
+07-15 07:21:09.754 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.a.d.m.m.A.selectById:135[0;39m - <==      Total: 1
+2026-07-15 07:21:09.754 [tomcat-handler-1] DEBUG c.x.a.d.m.m.A.selectById:135 - <==      Total: 1
+07-15 07:21:09.774 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.o.d.m.m.O.insert:135[0;39m - ==>  Preparing: INSERT INTO sys_operation_log ( userId, ip, module, operation, method, url, handler, params, success, costMs, createTime ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+2026-07-15 07:21:09.774 [tomcat-handler-1] DEBUG c.x.o.d.m.m.O.insert:135 - ==>  Preparing: INSERT INTO sys_operation_log ( userId, ip, module, operation, method, url, handler, params, success, costMs, createTime ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+07-15 07:21:09.775 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.o.d.m.m.O.insert:135[0;39m - ==> Parameters: 1(Integer), 0:0:0:0:0:0:0:1(String), 用户管理(String), 用户登录(String), POST(String), /api/user/login(String), UserController#login(String), {"username":"admin","password":"123456"}(String), true(Boolean), 610(Integer), 2026-07-15T07:21:09.774096(LocalDateTime)
+2026-07-15 07:21:09.775 [tomcat-handler-1] DEBUG c.x.o.d.m.m.O.insert:135 - ==> Parameters: 1(Integer), 0:0:0:0:0:0:0:1(String), 用户管理(String), 用户登录(String), POST(String), /api/user/login(String), UserController#login(String), {"username":"admin","password":"123456"}(String), true(Boolean), 610(Integer), 2026-07-15T07:21:09.774096(LocalDateTime)
+07-15 07:21:09.785 [tomcat-handler-1] [39mDEBUG[0;39m [36mc.x.o.d.m.m.O.insert:135[0;39m - <==    Updates: 1
+2026-07-15 07:21:09.785 [tomcat-handler-1] DEBUG c.x.o.d.m.m.O.insert:135 - <==    Updates: 1
+07-15 07:21:20.085 [tomcat-handler-2] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - ==>  Preparing: SELECT configId,userId,configName,configDesc,configType,modelType,provider,appId,apiKey,apiSecret,ak,sk,apiUrl,state,isDefault,enableThinking,createTime,updateTime FROM sys_config WHERE (state = ? AND configType = ? AND provider NOT IN (?,?,?)) ORDER BY isDefault DESC,createTime DESC
+2026-07-15 07:21:20.085 [tomcat-handler-2] DEBUG c.x.c.d.m.m.C.selectList:135 - ==>  Preparing: SELECT configId,userId,configName,configDesc,configType,modelType,provider,appId,apiKey,apiSecret,ak,sk,apiUrl,state,isDefault,enableThinking,createTime,updateTime FROM sys_config WHERE (state = ? AND configType = ? AND provider NOT IN (?,?,?)) ORDER BY isDefault DESC,createTime DESC
+07-15 07:21:20.087 [tomcat-handler-2] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - ==> Parameters: 1(String), tts(String), coze(String), dify(String), xingchen(String)
+2026-07-15 07:21:20.087 [tomcat-handler-2] DEBUG c.x.c.d.m.m.C.selectList:135 - ==> Parameters: 1(String), tts(String), coze(String), dify(String), xingchen(String)
+07-15 07:21:20.098 [tomcat-handler-2] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - <==      Total: 2
+2026-07-15 07:21:20.098 [tomcat-handler-2] DEBUG c.x.c.d.m.m.C.selectList:135 - <==      Total: 2
+TTSWebsocket closed:
+07-15 07:22:06.772 [tomcat-handler-3] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - ==>  Preparing: SELECT configId,userId,configName,configDesc,configType,modelType,provider,appId,apiKey,apiSecret,ak,sk,apiUrl,state,isDefault,enableThinking,createTime,updateTime FROM sys_config WHERE (state = ? AND configType = ? AND provider NOT IN (?,?,?)) ORDER BY isDefault DESC,createTime DESC
+2026-07-15 07:22:06.772 [tomcat-handler-3] DEBUG c.x.c.d.m.m.C.selectList:135 - ==>  Preparing: SELECT configId,userId,configName,configDesc,configType,modelType,provider,appId,apiKey,apiSecret,ak,sk,apiUrl,state,isDefault,enableThinking,createTime,updateTime FROM sys_config WHERE (state = ? AND configType = ? AND provider NOT IN (?,?,?)) ORDER BY isDefault DESC,createTime DESC
+07-15 07:22:06.774 [tomcat-handler-3] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - ==> Parameters: 1(String), tts(String), coze(String), dify(String), xingchen(String)
+2026-07-15 07:22:06.774 [tomcat-handler-3] DEBUG c.x.c.d.m.m.C.selectList:135 - ==> Parameters: 1(String), tts(String), coze(String), dify(String), xingchen(String)
+07-15 07:22:06.779 [tomcat-handler-3] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - <==      Total: 2
+2026-07-15 07:22:06.779 [tomcat-handler-3] DEBUG c.x.c.d.m.m.C.selectList:135 - <==      Total: 2
+TTSWebsocket closed:
+07-15 07:24:19.141 [tomcat-handler-4] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - ==>  Preparing: SELECT configId,userId,configName,configDesc,configType,modelType,provider,appId,apiKey,apiSecret,ak,sk,apiUrl,state,isDefault,enableThinking,createTime,updateTime FROM sys_config WHERE (state = ? AND configType = ? AND provider NOT IN (?,?,?)) ORDER BY isDefault DESC,createTime DESC
+2026-07-15 07:24:19.141 [tomcat-handler-4] DEBUG c.x.c.d.m.m.C.selectList:135 - ==>  Preparing: SELECT configId,userId,configName,configDesc,configType,modelType,provider,appId,apiKey,apiSecret,ak,sk,apiUrl,state,isDefault,enableThinking,createTime,updateTime FROM sys_config WHERE (state = ? AND configType = ? AND provider NOT IN (?,?,?)) ORDER BY isDefault DESC,createTime DESC
+07-15 07:24:19.143 [tomcat-handler-4] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - ==> Parameters: 1(String), tts(String), coze(String), dify(String), xingchen(String)
+2026-07-15 07:24:19.143 [tomcat-handler-4] DEBUG c.x.c.d.m.m.C.selectList:135 - ==> Parameters: 1(String), tts(String), coze(String), dify(String), xingchen(String)
+07-15 07:24:19.146 [tomcat-handler-4] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - <==      Total: 2
+2026-07-15 07:24:19.146 [tomcat-handler-4] DEBUG c.x.c.d.m.m.C.selectList:135 - <==      Total: 2
+TTSWebsocket closed:
+07-15 07:27:25.844 [tomcat-handler-5] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - ==>  Preparing: SELECT configId,userId,configName,configDesc,configType,modelType,provider,appId,apiKey,apiSecret,ak,sk,apiUrl,state,isDefault,enableThinking,createTime,updateTime FROM sys_config WHERE (state = ? AND configType = ? AND provider NOT IN (?,?,?)) ORDER BY isDefault DESC,createTime DESC
+2026-07-15 07:27:25.844 [tomcat-handler-5] DEBUG c.x.c.d.m.m.C.selectList:135 - ==>  Preparing: SELECT configId,userId,configName,configDesc,configType,modelType,provider,appId,apiKey,apiSecret,ak,sk,apiUrl,state,isDefault,enableThinking,createTime,updateTime FROM sys_config WHERE (state = ? AND configType = ? AND provider NOT IN (?,?,?)) ORDER BY isDefault DESC,createTime DESC
+07-15 07:27:25.845 [tomcat-handler-5] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - ==> Parameters: 1(String), tts(String), coze(String), dify(String), xingchen(String)
+2026-07-15 07:27:25.845 [tomcat-handler-5] DEBUG c.x.c.d.m.m.C.selectList:135 - ==> Parameters: 1(String), tts(String), coze(String), dify(String), xingchen(String)
+07-15 07:27:25.856 [tomcat-handler-5] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - <==      Total: 2
+2026-07-15 07:27:25.856 [tomcat-handler-5] DEBUG c.x.c.d.m.m.C.selectList:135 - <==      Total: 2
+TTSWebsocket closed:
+07-15 07:32:12.509 [tomcat-handler-6] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - ==>  Preparing: SELECT configId,userId,configName,configDesc,configType,modelType,provider,appId,apiKey,apiSecret,ak,sk,apiUrl,state,isDefault,enableThinking,createTime,updateTime FROM sys_config WHERE (state = ? AND configType = ? AND provider NOT IN (?,?,?)) ORDER BY isDefault DESC,createTime DESC
+2026-07-15 07:32:12.509 [tomcat-handler-6] DEBUG c.x.c.d.m.m.C.selectList:135 - ==>  Preparing: SELECT configId,userId,configName,configDesc,configType,modelType,provider,appId,apiKey,apiSecret,ak,sk,apiUrl,state,isDefault,enableThinking,createTime,updateTime FROM sys_config WHERE (state = ? AND configType = ? AND provider NOT IN (?,?,?)) ORDER BY isDefault DESC,createTime DESC
+07-15 07:32:12.515 [tomcat-handler-6] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - ==> Parameters: 1(String), tts(String), coze(String), dify(String), xingchen(String)
+2026-07-15 07:32:12.515 [tomcat-handler-6] DEBUG c.x.c.d.m.m.C.selectList:135 - ==> Parameters: 1(String), tts(String), coze(String), dify(String), xingchen(String)
+07-15 07:32:12.537 [tomcat-handler-6] [39mDEBUG[0;39m [36mc.x.c.d.m.m.C.selectList:135[0;39m - <==      Total: 2
+2026-07-15 07:32:12.537 [tomcat-handler-6] DEBUG c.x.c.d.m.m.C.selectList:135 - <==      Total: 2
+TTSWebsocket closed:
+07-15 08:34:39.950 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=59s521ms).
+2026-07-15 08:34:39.950 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=59s521ms).
+07-15 08:36:08.367 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=53s732ms).
+2026-07-15 08:36:08.367 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=53s732ms).
+07-15 08:38:21.567 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=1m1s85ms).
+2026-07-15 08:38:21.567 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=1m1s85ms).
+07-15 08:39:47.789 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=54s652ms).
+2026-07-15 08:39:47.789 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=54s652ms).
+07-15 08:42:53.272 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=2m4s837ms).
+2026-07-15 08:42:53.272 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=2m4s837ms).
+07-15 08:45:01.447 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=2m8s177ms).
+2026-07-15 08:45:01.447 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=2m8s177ms).
+07-15 08:49:02.595 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=3m17s452ms).
+2026-07-15 08:49:02.595 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=3m17s452ms).
+07-15 08:51:29.625 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=2m27s32ms).
+2026-07-15 08:51:29.625 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=2m27s32ms).
+07-15 08:58:18.084 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=6m48s460ms).
+2026-07-15 08:58:18.084 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=6m48s460ms).
+07-15 09:03:06.011 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=4m47s925ms).
+2026-07-15 09:03:06.011 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=4m47s925ms).
+07-15 09:05:52.965 [DatebookHikariCP:housekeeper] [31mWARN [0;39m [36mc.z.hikari.pool.HikariPool:825[0;39m - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=2m46s954ms).
+2026-07-15 09:05:52.965 [DatebookHikariCP:housekeeper] WARN  c.z.hikari.pool.HikariPool:825 - DatebookHikariCP - Thread starvation or clock leap detected (housekeeper delta=2m46s954ms).

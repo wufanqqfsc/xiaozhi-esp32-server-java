@@ -56,7 +56,14 @@ public class TtsTestController extends BaseController {
                     return;
                 }
             } else {
-                config = configService.getDefaultConfig("tts");
+                // T15: 取 configType='tts' 且 isDefault=1 且 modelType IS NULL 的记录（Edge TTS 默认）
+                // 先取所有 TTS 配置, 再在代码中筛选，避免依赖不可靠的 SQL ORDER BY 排序。
+                java.util.List<ConfigBO> allTts = configService.listBO(null, "tts", null, null, null, ConfigBO.STATE_ENABLED);
+                config = allTts.stream()
+                    .filter(c -> "1".equals(c.getIsDefault()))
+                    .filter(c -> c.getModelType() == null || c.getModelType().isBlank())
+                    .findFirst()
+                    .orElseGet(() -> configService.getDefaultConfig("tts"));
             }
 
             var ttsService = ttsServiceFactory.getTtsService(config, voiceName, pitch, speed);

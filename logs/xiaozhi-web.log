@@ -3,10 +3,9 @@
 > vite
 
 
-  [32m[1mVITE[22m v7.3.1[39m  [2mready in [0m[1m773[22m[2m[0m ms[22m
+  VITE v7.3.1  ready in 570 ms
 
-  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8084[22m/[39m
-  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.0.198:[1m8084[22m/[39m
-  [32m➜[39m  [1mNetwork[22m: [36mhttp://198.18.0.1:[1m8084[22m/[39m
+  ➜  Local:   http://localhost:8084/
+  ➜  Network: http://192.168.3.32:8084/
   ➜  Vue DevTools: Open http://localhost:8084/__devtools__/ as a separate window
   ➜  Vue DevTools: Press Option(⌥)+Shift(⇧)+D in App to toggle the Vue DevTools
