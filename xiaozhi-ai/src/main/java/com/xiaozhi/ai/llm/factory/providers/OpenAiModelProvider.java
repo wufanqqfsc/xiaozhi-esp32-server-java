@@ -309,23 +309,28 @@ public class OpenAiModelProvider implements ChatModelProvider {
     }
 
     /**
-     * 诊断专用 filter：dump 请求 URL/Headers、响应状态/Headers/错误体到
+     * 诊断专用 filter：dump 请求 URL/Headers/Body、响应状态/Headers/错误体到
      * logs/minimax-debug.log，便于定位 400 错误根因。
      * <p>
-     * <b>关键实现</b>：当响应是 4xx/5xx 时，{@code ClientResponse} 的 body publisher
-     * 尚未被订阅，{@code WebClientResponseException.getResponseBodyAsString()} 拿到的是空。
-     * 本 filter 在 {@code doOnNext} 阶段就主动把 body 读为 {@code byte[]}，记录到 dump，
-     * 然后用 {@code ClientResponse.create(...).body(byte[])} 重建一个等价的响应
-     * 传给下游，<u>不破坏流式</u>。
-     * <p>
-     * 成功响应（2xx）的 body 仍走原始流式 publisher，不读取。
+     * <b>关键实现</b>：
+     * <ul>
+     *   <li><b>请求 body</b>：用 {@link org.springframework.mock.http.client.MockClientHttpRequest}
+     *       作为桩接收 {@code BodyInserter}，把 bytes 收集到内存（仅 1-10KB，可接受），写到 dump。
+     *       不破坏流式（仅读取并原样放回）。</li>
+     *   <li><b>4xx 响应 body</b>：当响应是 4xx/5xx 时，{@code ClientResponse} 的 body publisher
+     *       尚未被订阅，{@code WebClientResponseException.getResponseBodyAsString()} 拿到的是空。
+     *       本 filter 在 {@code flatMap} 阶段就主动把 body 读为 {@code byte[]}，记录到 dump，
+     *       然后用 {@code ClientResponse.create(...).body(byte[])} 重建一个等价的响应
+     *       传给下游，<u>不破坏流式</u>。</li>
+     *   <li>成功响应（2xx）的 body 仍走原始流式 publisher，不读取。</li>
+     * </ul>
      */
     private static ExchangeFilterFunction miniMaxResponseDumpFilter() {
         final java.util.concurrent.atomic.AtomicInteger seq = new java.util.concurrent.atomic.AtomicInteger(0);
         return (request, next) -> {
             int id = seq.incrementAndGet();
             long t0 = System.nanoTime();
-            StringBuilder dump = new StringBuilder(2048);
+            StringBuilder dump = new StringBuilder(4096);
             dump.append("\n========== MiniMax LLM call #").append(id).append(" ==========\n");
             dump.append("TIME: ").append(java.time.LocalDateTime.now()).append('\n');
             dump.append("METHOD: ").append(request.method()).append('\n');
@@ -339,7 +344,83 @@ public class OpenAiModelProvider implements ChatModelProvider {
                 }
                 dump.append("  ").append(k).append(": ").append(joined).append('\n');
             });
-            dump.append("(request body omitted; ChatCompletion request body is captured separately if needed)\n");
+
+            // 把请求 body 写到一个桩 ClientHttpRequest（reactive 变种），收集字节用于 dump。
+            // reactive 的 ClientHttpRequest.body() 返回 BodyInserter，写入时通过
+            // writeWith(Flux<DataBuffer>) 把 bytes 聚合到内部 ByteArrayOutputStream。
+            try {
+                java.io.ByteArrayOutputStream reqBaos = new java.io.ByteArrayOutputStream(4096);
+                org.springframework.http.client.reactive.ClientHttpRequest bodyStub =
+                    new org.springframework.http.client.reactive.ClientHttpRequest() {
+                    private final org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                    @Override public org.springframework.http.HttpMethod getMethod() { return org.springframework.http.HttpMethod.valueOf(request.method().name()); }
+                    @Override public java.net.URI getURI() { return request.url(); }
+                    @Override public org.springframework.http.HttpHeaders getHeaders() { return headers; }
+                    @Override public java.util.Map<String, Object> getAttributes() { return java.util.Collections.emptyMap(); }
+                    @Override public org.springframework.core.io.buffer.DataBufferFactory bufferFactory() { return org.springframework.core.io.buffer.DefaultDataBufferFactory.sharedInstance; }
+                    @Override public boolean isCommitted() { return false; }
+                    @Override public void beforeCommit(java.util.function.Supplier<? extends reactor.core.publisher.Mono<Void>> action) { /* no-op */ }
+                    @Override public org.springframework.util.MultiValueMap<String, org.springframework.http.HttpCookie> getCookies() { return new org.springframework.util.LinkedMultiValueMap<>(); }
+                    @Override public <T> T getNativeRequest() { return null; }
+                    @Override public reactor.core.publisher.Mono<Void> writeWith(org.reactivestreams.Publisher<? extends org.springframework.core.io.buffer.DataBuffer> body) {
+                        return reactor.core.publisher.Flux.from(body)
+                            .doOnNext(buf -> {
+                                byte[] chunk = new byte[buf.readableByteCount()];
+                                buf.read(chunk);
+                                reqBaos.write(chunk, 0, chunk.length);
+                            })
+                            .then();
+                    }
+                    @Override public reactor.core.publisher.Mono<Void> writeAndFlushWith(org.reactivestreams.Publisher<? extends org.reactivestreams.Publisher<? extends org.springframework.core.io.buffer.DataBuffer>> body) {
+                        return reactor.core.publisher.Flux.from(body)
+                            .flatMap(p -> reactor.core.publisher.Flux.from(p))
+                            .doOnNext(buf -> {
+                                byte[] chunk = new byte[buf.readableByteCount()];
+                                buf.read(chunk);
+                                reqBaos.write(chunk, 0, chunk.length);
+                            })
+                            .then();
+                    }
+                    @Override public reactor.core.publisher.Mono<Void> setComplete() {
+                        return reactor.core.publisher.Mono.empty();
+                    }
+                };
+                // BodyInserter.Context：提供 messageWriters/serverRequest/hints。
+                // messageWriters 取自 ExchangeStrategies.withDefaults()，与 WebClient 一致。
+                org.springframework.web.reactive.function.client.ExchangeStrategies strategies =
+                        org.springframework.web.reactive.function.client.ExchangeStrategies.withDefaults();
+                request.body().insert(bodyStub, new org.springframework.web.reactive.function.BodyInserter.Context() {
+                    @Override
+                    public java.util.List<org.springframework.http.codec.HttpMessageWriter<?>> messageWriters() {
+                        return strategies.messageWriters();
+                    }
+                    @Override
+                    public java.util.Optional<org.springframework.http.server.reactive.ServerHttpRequest> serverRequest() {
+                        return java.util.Optional.empty();
+                    }
+                    @Override
+                    public java.util.Map<String, Object> hints() {
+                        return java.util.Collections.emptyMap();
+                    }
+                }).block();
+                byte[] reqBody = reqBaos.toByteArray();
+                dump.append("REQUEST BODY (").append(reqBody.length).append(" bytes):\n");
+                if (reqBody.length > 0) {
+                    String bodyStr = new String(reqBody, java.nio.charset.StandardCharsets.UTF_8);
+                    if (bodyStr.length() > 50_000) {
+                        bodyStr = bodyStr.substring(0, 50_000) + "...(truncated, original " + bodyStr.length() + " chars)";
+                    }
+                    dump.append(bodyStr);
+                    if (!bodyStr.endsWith("\n")) {
+                        dump.append('\n');
+                    }
+                } else {
+                    dump.append("(empty)\n");
+                }
+            } catch (Throwable th) {
+                dump.append("(failed to capture request body: ")
+                    .append(th.getClass().getName()).append(": ").append(th.getMessage()).append(")\n");
+            }
 
             return next.exchange(request)
                 .flatMap((ClientResponse resp) -> {
