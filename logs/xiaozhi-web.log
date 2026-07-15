@@ -3,9 +3,9 @@
 > vite
 
 
-  VITE v7.3.1  ready in 570 ms
+  VITE v7.3.1  ready in 510 ms
 
   ➜  Local:   http://localhost:8084/
-  ➜  Network: http://192.168.3.32:8084/
+  ➜  Network: http://192.168.0.198:8084/
   ➜  Vue DevTools: Open http://localhost:8084/__devtools__/ as a separate window
   ➜  Vue DevTools: Press Option(⌥)+Shift(⇧)+D in App to toggle the Vue DevTools

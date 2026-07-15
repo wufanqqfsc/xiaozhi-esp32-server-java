@@ -1,0 +1,372 @@
+
+========== MiniMax LLM call #1 ==========
+TIME: 2026-07-15T15:32:30.732019
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 400 (error)
+COST: 704 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784100751.295
+  alb_request_id: 869a3f5569e5f6b99e50220525cdf312372b7b47
+  connection: keep-alive
+  content-length: 218
+  content-type: application/json; charset=utf-8
+  date: Wed, 15 Jul 2026 07:32:31 GMT
+  minimax-request-id: 1b97f3a167a2c2aba39611a17f41c8ec
+  trace-id: 06a66a8fc085a006970487d99aa8f0b6
+  x-session-id: 27a73b396ee17e92e9e2048f81fb03e8
+
+========== MiniMax LLM call #1 ==========
+TIME: 2026-07-15T15:32:30.732019
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 400 (error)
+COST: 704 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784100751.295
+  alb_request_id: 869a3f5569e5f6b99e50220525cdf312372b7b47
+  connection: keep-alive
+  content-length: 218
+  content-type: application/json; charset=utf-8
+  date: Wed, 15 Jul 2026 07:32:31 GMT
+  minimax-request-id: 1b97f3a167a2c2aba39611a17f41c8ec
+  trace-id: 06a66a8fc085a006970487d99aa8f0b6
+  x-session-id: 27a73b396ee17e92e9e2048f81fb03e8
+
+========== MiniMax LLM call #1 ==========
+TIME: 2026-07-15T15:36:30.126242
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 400 (error)
+COST: 865 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784100990.88
+  alb_request_id: d4a45ea72dfd9260ca73db5c5e29d1fde2b40b66
+  connection: keep-alive
+  content-length: 218
+  content-type: application/json; charset=utf-8
+  date: Wed, 15 Jul 2026 07:36:31 GMT
+  minimax-request-id: d6a7747c3b974d21651e7c85bf40818e
+  trace-id: 06a66b7f31f3b0fadede82e99eb50d79
+  x-session-id: 27a73b396ee17e92e9e2048f81fb03e8
+ERROR RESPONSE BODY (218 bytes):
+{"type":"error","error":{"type":"bad_request_error","message":"invalid params, tool result's tool id(chatcmpl-tool-8098be8ba17f05a0) not found (2013)","http_code":"400"},"request_id":"06a66b7f31f3b0fadede82e99eb50d79"}
+
+========== MiniMax LLM call #1 ==========
+TIME: 2026-07-15T15:36:30.126242
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 400 (error)
+COST: 865 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784100990.88
+  alb_request_id: d4a45ea72dfd9260ca73db5c5e29d1fde2b40b66
+  connection: keep-alive
+  content-length: 218
+  content-type: application/json; charset=utf-8
+  date: Wed, 15 Jul 2026 07:36:31 GMT
+  minimax-request-id: d6a7747c3b974d21651e7c85bf40818e
+  trace-id: 06a66b7f31f3b0fadede82e99eb50d79
+  x-session-id: 27a73b396ee17e92e9e2048f81fb03e8
+ERROR RESPONSE BODY (218 bytes):
+{"type":"error","error":{"type":"bad_request_error","message":"invalid params, tool result's tool id(chatcmpl-tool-8098be8ba17f05a0) not found (2013)","http_code":"400"},"request_id":"06a66b7f31f3b0fadede82e99eb50d79"}
+
+========== MiniMax LLM call #2 ==========
+TIME: 2026-07-15T15:38:15.471507
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 200
+COST: 1329 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784101095.8
+  alb_request_id: 649d3ddeff9f8dfde4111674e92d8c2bc59b2717
+  connection: keep-alive
+  content-type: text/event-stream; charset=utf-8
+  date: Wed, 15 Jul 2026 07:38:15 GMT
+  eo-cache-status: MISS
+  eo-log-uuid: 4435224039736956303
+  minimax-request-id: 09c66929d545510e86a596a3965cfbe5
+  server: TencentEdgeOne
+  trace-id: 06a66be7adcfc614c64a9a2ebc945329
+  transfer-encoding: chunked
+  vary: Accept-Encoding
+  x-from: tx
+  x-mm-request-id: 2027048564114334003_1784101095fgpb5f
+  x-session-id: 09e1a768560e66f255269b0c5c49a3ab
+
+========== MiniMax LLM call #2 ==========
+TIME: 2026-07-15T15:38:15.471507
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 200
+COST: 1329 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784101095.8
+  alb_request_id: 649d3ddeff9f8dfde4111674e92d8c2bc59b2717
+  connection: keep-alive
+  content-type: text/event-stream; charset=utf-8
+  date: Wed, 15 Jul 2026 07:38:15 GMT
+  eo-cache-status: MISS
+  eo-log-uuid: 4435224039736956303
+  minimax-request-id: 09c66929d545510e86a596a3965cfbe5
+  server: TencentEdgeOne
+  trace-id: 06a66be7adcfc614c64a9a2ebc945329
+  transfer-encoding: chunked
+  vary: Accept-Encoding
+  x-from: tx
+  x-mm-request-id: 2027048564114334003_1784101095fgpb5f
+  x-session-id: 09e1a768560e66f255269b0c5c49a3ab
+
+========== MiniMax LLM call #3 ==========
+TIME: 2026-07-15T15:39:11.248660
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 200
+COST: 2281 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784101151.708
+  alb_request_id: 8fadaf6a71c09500896620ce6ee453246da8bcfc
+  connection: keep-alive
+  content-type: text/event-stream; charset=utf-8
+  date: Wed, 15 Jul 2026 07:39:11 GMT
+  eo-cache-status: MISS
+  eo-log-uuid: 2288891824246624725
+  minimax-request-id: 37d319ec1229aba407700d14f4c7e787
+  server: TencentEdgeOne
+  trace-id: 06a66c1f6f3cd1c221ecb8a7c7f982e5
+  transfer-encoding: chunked
+  vary: Accept-Encoding
+  x-from: tx
+  x-mm-request-id: 2027048564114334003_17841011511fne1b
+  x-session-id: a9a07ed3231f44620be51e8bc14591fe
+
+========== MiniMax LLM call #3 ==========
+TIME: 2026-07-15T15:39:11.248660
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 200
+COST: 2281 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784101151.708
+  alb_request_id: 8fadaf6a71c09500896620ce6ee453246da8bcfc
+  connection: keep-alive
+  content-type: text/event-stream; charset=utf-8
+  date: Wed, 15 Jul 2026 07:39:11 GMT
+  eo-cache-status: MISS
+  eo-log-uuid: 2288891824246624725
+  minimax-request-id: 37d319ec1229aba407700d14f4c7e787
+  server: TencentEdgeOne
+  trace-id: 06a66c1f6f3cd1c221ecb8a7c7f982e5
+  transfer-encoding: chunked
+  vary: Accept-Encoding
+  x-from: tx
+  x-mm-request-id: 2027048564114334003_17841011511fne1b
+  x-session-id: a9a07ed3231f44620be51e8bc14591fe
+
+========== MiniMax LLM call #4 ==========
+TIME: 2026-07-15T15:39:21.260797
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 200
+COST: 3051 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784101161.487
+  alb_request_id: e1eadb3e112aa843c0bfe953b86c9d5c18ea995b
+  connection: keep-alive
+  content-type: text/event-stream; charset=utf-8
+  date: Wed, 15 Jul 2026 07:39:21 GMT
+  eo-cache-status: MISS
+  eo-log-uuid: 412986383147819319
+  minimax-request-id: 61fa5b9fdef4d3e9ba3b9532220d0dd1
+  server: TencentEdgeOne
+  trace-id: 06a66c29dbf5251611df188a6f165441
+  transfer-encoding: chunked
+  vary: Accept-Encoding
+  x-from: tx
+  x-mm-request-id: 2027048564114334003_1784101161tvtw6c
+  x-session-id: a9a07ed3231f44620be51e8bc14591fe
+
+========== MiniMax LLM call #4 ==========
+TIME: 2026-07-15T15:39:21.260797
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 200
+COST: 3051 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784101161.487
+  alb_request_id: e1eadb3e112aa843c0bfe953b86c9d5c18ea995b
+  connection: keep-alive
+  content-type: text/event-stream; charset=utf-8
+  date: Wed, 15 Jul 2026 07:39:21 GMT
+  eo-cache-status: MISS
+  eo-log-uuid: 412986383147819319
+  minimax-request-id: 61fa5b9fdef4d3e9ba3b9532220d0dd1
+  server: TencentEdgeOne
+  trace-id: 06a66c29dbf5251611df188a6f165441
+  transfer-encoding: chunked
+  vary: Accept-Encoding
+  x-from: tx
+  x-mm-request-id: 2027048564114334003_1784101161tvtw6c
+  x-session-id: a9a07ed3231f44620be51e8bc14591fe
+
+========== MiniMax LLM call #1 ==========
+TIME: 2026-07-15T15:41:21.155406
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 200
+COST: 2130 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784101281.931
+  alb_request_id: e81595f411a25b459042d3d3d22c15249f6b6b9c
+  connection: keep-alive
+  content-type: text/event-stream; charset=utf-8
+  date: Wed, 15 Jul 2026 07:41:21 GMT
+  eo-cache-status: MISS
+  eo-log-uuid: 6305727579406196545
+  minimax-request-id: 93ddeb15d31ffc9935397558af9066c9
+  server: TencentEdgeOne
+  trace-id: 06a66ca2009a291b611e63308b95bd58
+  transfer-encoding: chunked
+  vary: Accept-Encoding
+  x-from: tx
+  x-mm-request-id: 2027048564114334003_1784101282mwwuv6
+  x-session-id: 61be9188448616c438317058d539d767
+
+========== MiniMax LLM call #1 ==========
+TIME: 2026-07-15T15:41:21.155406
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 200
+COST: 2130 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784101281.931
+  alb_request_id: e81595f411a25b459042d3d3d22c15249f6b6b9c
+  connection: keep-alive
+  content-type: text/event-stream; charset=utf-8
+  date: Wed, 15 Jul 2026 07:41:21 GMT
+  eo-cache-status: MISS
+  eo-log-uuid: 6305727579406196545
+  minimax-request-id: 93ddeb15d31ffc9935397558af9066c9
+  server: TencentEdgeOne
+  trace-id: 06a66ca2009a291b611e63308b95bd58
+  transfer-encoding: chunked
+  vary: Accept-Encoding
+  x-from: tx
+  x-mm-request-id: 2027048564114334003_1784101282mwwuv6
+  x-session-id: 61be9188448616c438317058d539d767
+
+========== MiniMax LLM call #1 ==========
+TIME: 2026-07-15T15:41:36.136252
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 200
+COST: 1809 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784101296.437
+  alb_request_id: 3e7dc8b4531d9f8b9525777e009a4435433ef02a
+  connection: keep-alive
+  content-type: text/event-stream; charset=utf-8
+  date: Wed, 15 Jul 2026 07:41:36 GMT
+  eo-cache-status: MISS
+  eo-log-uuid: 6152663993860720375
+  minimax-request-id: 19da1dc8f7216ea8d66e8ea3229c33fb
+  server: TencentEdgeOne
+  trace-id: 06a66cb01835594a0ea2a38c4f9918bf
+  transfer-encoding: chunked
+  vary: Accept-Encoding
+  x-from: tx
+  x-mm-request-id: 2027048564114334003_1784101296hjfd8f
+  x-session-id: 396d9b6b434ae5a3e46d67a3293abdef
+
+========== MiniMax LLM call #1 ==========
+TIME: 2026-07-15T15:41:36.136252
+METHOD: POST
+URL: https://api.minimaxi.com/v1/chat/completions
+REQUEST HEADERS:
+  Content-Type: application/json,application/json
+  User-Agent: spring-ai
+  Authorization: Bearer sk-cp...(redacted,132 chars)
+(request body omitted; ChatCompletion request body is captured separately if needed)
+STATUS: 200
+COST: 1809 ms
+RESPONSE HEADERS:
+  alb_receive_time: 1784101296.437
+  alb_request_id: 3e7dc8b4531d9f8b9525777e009a4435433ef02a
+  connection: keep-alive
+  content-type: text/event-stream; charset=utf-8
+  date: Wed, 15 Jul 2026 07:41:36 GMT
+  eo-cache-status: MISS
+  eo-log-uuid: 6152663993860720375
+  minimax-request-id: 19da1dc8f7216ea8d66e8ea3229c33fb
+  server: TencentEdgeOne
+  trace-id: 06a66cb01835594a0ea2a38c4f9918bf
+  transfer-encoding: chunked
+  vary: Accept-Encoding
+  x-from: tx
+  x-mm-request-id: 2027048564114334003_1784101296hjfd8f
+  x-session-id: 396d9b6b434ae5a3e46d67a3293abdef
