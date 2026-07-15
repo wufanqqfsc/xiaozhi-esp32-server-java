@@ -35,6 +35,7 @@ export default {
     delete: '/role',
     testVoice: '/role/testVoice',
     sherpaVoices: '/role/sherpaVoices',
+    hotReload: '/role',
   },
   template: {
     query: '/template',

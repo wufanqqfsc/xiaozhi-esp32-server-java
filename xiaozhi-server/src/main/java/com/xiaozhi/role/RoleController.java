@@ -120,6 +120,23 @@ public class RoleController extends BaseController {
     }
 
     /**
+     * 热更新角色配置：清除角色缓存，使新配置在下次请求时生效。
+     * 已建立会话的设备/Web聊天需重新连接才能加载新配置。
+     *
+     * @param roleId 角色ID
+     */
+    @PostMapping("/{roleId}/hot-reload")
+    @ResponseBody
+    @SaCheckPermission("system:role:api:update")
+    @CheckOwner(resource = "role", id = "#roleId")
+    @AuditLog(module = "角色管理", operation = "热更新角色配置")
+    @Operation(summary = "热更新角色配置", description = "清除角色缓存，使修改后的角色配置立即生效")
+    public ApiResponse<?> hotReload(@PathVariable Integer roleId) {
+        roleAppService.hotReload(roleId);
+        return ApiResponse.success("角色配置已热更新，新会话将使用最新配置");
+    }
+
+    /**
      * 扫描配置的本地 TTS 模型目录，动态返回所有可用的 sherpa-onnx 音色列表
      */
     @GetMapping("/sherpaVoices")

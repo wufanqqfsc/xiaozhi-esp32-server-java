@@ -68,3 +68,10 @@ export function getDisabledTools(roleId: number) {
 export function updateToolsStatus(roleId: number, excludeTools: string[]) {
   return http.post(`${api.mcpTool.batchExclude}/${roleId}/exclude-tools`, { excludeTools })
 }
+
+/**
+ * 热更新角色配置：清除角色缓存，使新配置在下次请求时生效
+ */
+export function hotReloadRole(roleId: number) {
+  return http.post(`${api.role.hotReload}/${roleId}/hot-reload`, {})
+}

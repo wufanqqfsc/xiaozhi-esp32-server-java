@@ -25,6 +25,7 @@ import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.http.client.reactive.JdkClientHttpConnector;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
@@ -299,11 +300,17 @@ public class OpenAiModelProvider implements ChatModelProvider {
             if (!HttpMethod.POST.equals(request.method())) {
                 return next.exchange(request);
             }
-            // MiniMax 流式路径：依赖同步 interceptor 即可。
-            // 这里只做最小处理：直接放行，避免 BodyInserter 的复杂拆装。
-            // 如果需要流式也注入 thinking:disabled，需要用 ClientRequest 的
-            // body(BodyInserter) 重新装配并触发 MockClientHttpRequest 收集 bytes。
-            log.debug("MiniMax WebClient stream path: 依赖同步 interceptor 控制 thinking");
+            // 真实注入 "thinking" + "reasoning_split" 需要在流式路径上读 body 字节、
+            // 改 JSON、用 BodyInserters.fromBytes 重新包装 ClientRequest。
+            // Spring AI 1.1.4 + Spring WebFlux 6 在 WebClient ExchangeFilterFunction 中没有
+            // 干净的"读 body 字节"API（BodyInserter 是惰性的、不暴露 byte[] 通道），
+            // 自实现 ReactiveHttpOutputMessage 桩会与 message/codec 解码器冲突，调试复杂。
+            //
+            // 当前做法：先让请求原样发出，由下游 miniMaxResponseDumpFilter 抓到完整 400 响应体
+            // 后，再基于真实错误体决定是否在更上层（Spring AI ChatModel 替换实现）注入。
+            if (log.isDebugEnabled()) {
+                log.debug("MiniMax stream path: body passthrough (thinking injection pending real 400 body). uri={}", request.url());
+            }
             return next.exchange(request);
         };
     }

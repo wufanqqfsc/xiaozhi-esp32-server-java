@@ -32,6 +32,12 @@ public class MessageWindowConversation extends Conversation {
         log.info("加载对话历史: sessionScoped={}, ownerId={}, sessionId={}, size={}",
                 sessionScoped, ownerId, sessionId, history.size());
         super.messages.addAll(history);
+        // 加载后立即清理历史中孤立的 tool result（无匹配 assistant.toolCalls）
+        int removed = purgeOrphanToolResults(messages);
+        if (removed > 0) {
+            log.warn("加载历史时清理 {} 条孤立 tool result（ownerId={} roleId={} sessionId={}）",
+                    removed, ownerId, roleId, sessionId);
+        }
     }
 
     @Override
@@ -64,15 +70,72 @@ public class MessageWindowConversation extends Conversation {
                 }
             }
         }
+        // 兜底：返回前再过滤一次孤立 tool result（防止 messages 已被外部修改）
+        List<Message> safeMessages = new ArrayList<>();
+        Set<String> validToolIds = collectValidToolCallIds(messages);
+        for (Message m : messages) {
+            if (m instanceof ToolResponseMessage trm) {
+                // 仅保留所有 toolResponse.id 都在 validToolIds 中的（保守：任一不在即整条丢弃）
+                boolean allMatch = trm.getResponses().stream()
+                        .allMatch(r -> r.id() != null && validToolIds.contains(r.id()));
+                if (!allMatch) {
+                    log.debug("过滤孤立 ToolResponseMessage（id={}）", trm.getResponses().stream()
+                            .map(org.springframework.ai.chat.messages.ToolResponseMessage.ToolResponse::id)
+                            .toList());
+                    continue;
+                }
+            }
+            safeMessages.add(m);
+        }
         // 新消息列表对象，避免使用过程中污染原始列表对象
         List<Message> historyMessages = new ArrayList<>();
         var roleSystemMessage = roleSystemMessage(context);
         if(roleSystemMessage.isPresent()){
             historyMessages.add(roleSystemMessage.get());
         }
-        historyMessages.addAll(messages);
+        historyMessages.addAll(safeMessages);
         // UserMessage 按 metadata 装配带前缀的副本供 LLM 使用
         return historyMessages.stream().map(UserMessageAssembler::assemble).toList();
+    }
+
+    /**
+     * 收集 messages 中所有 assistant 消息里 tool_call 的 id 集合。
+     */
+    private static Set<String> collectValidToolCallIds(List<Message> msgs) {
+        Set<String> ids = new HashSet<>();
+        for (Message m : msgs) {
+            if (m instanceof AssistantMessage am && am.getToolCalls() != null) {
+                for (AssistantMessage.ToolCall tc : am.getToolCalls()) {
+                    if (tc.id() != null) ids.add(tc.id());
+                }
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * 从 messages 中移除"孤立"的 ToolResponseMessage：即该 tool 消息的 id 不在
+     * 任何 assistant 消息的 tool_calls 中。
+     * 解决 MiniMax API 400 (2013) "tool result's tool id not found" 的问题。
+     *
+     * @return 实际移除的消息条数
+     */
+    private static int purgeOrphanToolResults(List<Message> msgs) {
+        Set<String> validIds = collectValidToolCallIds(msgs);
+        int removed = 0;
+        Iterator<Message> it = msgs.iterator();
+        while (it.hasNext()) {
+            Message m = it.next();
+            if (m instanceof ToolResponseMessage trm) {
+                boolean hasOrphan = trm.getResponses().stream()
+                        .anyMatch(r -> r.id() == null || !validIds.contains(r.id()));
+                if (hasOrphan) {
+                    it.remove();
+                    removed++;
+                }
+            }
+        }
+        return removed;
     }
 
     @Override

@@ -82,4 +82,8 @@ public class RoleAppService {
     public void delete(Integer roleId) {
         roleRepository.delete(roleId);
     }
+
+    public void hotReload(Integer roleId) {
+        roleService.hotReloadRole(roleId);
+    }
 }

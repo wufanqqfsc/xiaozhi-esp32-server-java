@@ -8,6 +8,7 @@ import com.xiaozhi.common.CacheHelper;
 import com.xiaozhi.common.model.bo.RoleBO;
 import com.xiaozhi.common.model.resp.PageResp;
 import com.xiaozhi.common.model.resp.RoleResp;
+import com.xiaozhi.event.RoleUpdatedEvent;
 import com.xiaozhi.role.convert.RoleConvert;
 import com.xiaozhi.role.dal.mysql.dataobject.RoleDO;
 import com.xiaozhi.role.dal.mysql.mapper.RoleMapper;
@@ -15,11 +16,15 @@ import com.xiaozhi.role.service.RoleService;
 import jakarta.annotation.Resource;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class RoleServiceImpl implements RoleService {
 
@@ -37,6 +42,9 @@ public class RoleServiceImpl implements RoleService {
 
     @Resource
     private CacheHelper cacheHelper;
+
+    @Resource
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @Override
     public PageResp<RoleResp> page(int pageNo, int pageSize, Integer roleId, String roleName,
@@ -145,6 +153,28 @@ public class RoleServiceImpl implements RoleService {
         roleMapper.update(null, new LambdaUpdateWrapper<RoleDO>()
             .eq(RoleDO::getUserId, userId)
             .set(RoleDO::getIsDefault, "0"));
+    }
+
+    @Override
+    public void hotReloadRole(Integer roleId) {
+        if (roleId == null) {
+            return;
+        }
+        String cacheKey = String.valueOf(roleId);
+        Cache cache = cacheManager.getCache(CACHE_NAME);
+        if (cache != null) {
+            cache.evict(cacheKey);
+        }
+        // 发 Spring 事件：RedisBroadcast.onRoleUpdated() 收到后通过 Redis Pub/Sub
+        // 跨实例广播 "xiaozhi:role-updated" 消息，每个实例的
+        // RedisSubscriber.onRoleUpdated 会销毁使用该 roleId 的活跃 Persona 并
+        // 清掉该实例的角色缓存。该步骤不阻塞本方法，失败也仅记日志。
+        try {
+            applicationEventPublisher.publishEvent(new RoleUpdatedEvent(this, roleId));
+            log.info("角色配置已热更新（含跨实例广播） - roleId={}", roleId);
+        } catch (Exception e) {
+            log.error("发布 RoleUpdatedEvent 失败，跨实例 Persona 不会重建 - roleId={}", roleId, e);
+        }
     }
 
 }

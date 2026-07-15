@@ -8,7 +8,8 @@ import {
   CameraOutlined,
   SnippetsOutlined,
   SoundOutlined,
-  PauseCircleOutlined
+  PauseCircleOutlined,
+  ReloadOutlined
 } from '@ant-design/icons-vue'
 import { useRouter } from 'vue-router'
 import { useTable } from '@/composables/useTable'
@@ -16,7 +17,7 @@ import { useRoleManager } from '@/composables/useRoleManager'
 import { useMemoryView } from '@/composables/useMemoryView'
 import { useClipboard } from '@/composables/useClipboard'
 import { ROUTES } from '@/router/routes'
-import { queryRoles, addRole, updateRole, deleteRole, testVoice, getSystemGlobalTools, getDisabledTools, updateToolsStatus } from '@/services/role'
+import { queryRoles, addRole, updateRole, deleteRole, testVoice, getSystemGlobalTools, getDisabledTools, updateToolsStatus, hotReloadRole } from '@/services/role'
 import { queryTemplates } from '@/services/template'
 import { getResourceUrl } from '@/utils/resource'
 import { useAvatar } from '@/composables/useAvatar'
@@ -303,6 +304,21 @@ const handleSetDefault = async (roleId: number) => {
     message.error(t('role.setAsDefaultFailed'))
   } finally {
     loading.value = false
+  }
+}
+
+// 热更新角色配置
+const handleHotReload = async (record: Role) => {
+  try {
+    const res = await hotReloadRole(record.roleId)
+    if (res.code === 200) {
+      message.success(typeof res.data === 'string' ? res.data : '角色配置已热更新')
+    } else {
+      message.error(res.message || '热更新失败')
+    }
+  } catch (error) {
+    console.error('热更新角色配置失败:', error)
+    message.error('热更新失败')
   }
 }
 
@@ -937,6 +953,12 @@ if (!editingRoleId.value) {
                       @click="() => navigateToMemory({ roleId: record.roleId })"
                     >
                       {{ t('role.memory') }}
+                    </a>
+                    <a
+                      v-permission="'system:role:update'"
+                      @click="() => handleHotReload(record)"
+                    >
+                      <reload-outlined /> 热更新
                     </a>
                   </template>
                 </TableActionButtons>

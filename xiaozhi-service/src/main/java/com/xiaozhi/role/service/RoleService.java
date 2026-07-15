@@ -25,4 +25,12 @@ public interface RoleService {
     // ===================== 写操作（待迁移到 RoleAppService） =====================
 
     Integer copyDefaultRole(Integer sourceUserId, Integer targetUserId);
+
+    /**
+     * 热更新角色配置：清除角色缓存，使新配置在下次请求时生效。
+     * 注意：已建立会话的设备/Web聊天需要重新连接才能加载新配置。
+     *
+     * @param roleId 角色ID
+     */
+    void hotReloadRole(Integer roleId);
 }
