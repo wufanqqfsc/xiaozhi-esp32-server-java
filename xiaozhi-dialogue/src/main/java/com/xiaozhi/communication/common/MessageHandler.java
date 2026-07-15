@@ -20,10 +20,12 @@ import com.xiaozhi.ai.tool.ToolsSessionHolder;
 import com.xiaozhi.dialogue.llm.tool.device.IotService;
 import com.xiaozhi.dialogue.audio.VadService;
 import com.xiaozhi.dialogue.playback.Player;
+import com.xiaozhi.dialogue.runtime.Persona;
 import com.xiaozhi.dialogue.playback.ScheduledPlayer;
 import com.xiaozhi.ai.tts.TtsServiceFactory;
 import com.xiaozhi.enums.DeviceState;
 import com.xiaozhi.enums.ListenState;
+import com.xiaozhi.enums.SessionInteractionMode;
 import com.xiaozhi.event.ChatAbortedEvent;
 import com.xiaozhi.role.service.RoleService;
 import jakarta.annotation.Resource;
@@ -357,8 +359,11 @@ public class MessageHandler {
         String sessionId = chatSession.getSessionId();
         log.info("收到listen消息 - SessionId: {}, State: {}, Mode: {}", sessionId, message.getState(), message.getMode());
 
-        // 如果会话标记为即将关闭，忽略listen消息
-        if (chatSession.getPlayer().getFunctionAfterChat()!= null) {
+        // 如果会话标记为即将关闭，忽略 listen 消息（唤醒 detect 必须放行）
+        Player player = chatSession.getPlayer();
+        if (message.getState() != ListenState.Detect
+                && player != null
+                && player.getFunctionAfterChat() != null) {
             return;
         }
 
@@ -368,6 +373,16 @@ public class MessageHandler {
         switch (message.getState()) {
             case ListenState.Start:
                 // 设备开始录音，进入聆听状态
+                Persona persona = chatSession.getPersona();
+                if (chatSession.getInteractionMode() == SessionInteractionMode.JARVIS_MENU
+                        && persona != null && persona.isActive()) {
+                    log.info("唤醒问候生成中，忽略 listen start 对 SPEAKING 的覆盖 - SessionId: {}", sessionId);
+                    vadService.initSession(sessionId);
+                    if (aecService != null) {
+                        aecService.initSession(sessionId);
+                    }
+                    break;
+                }
                 log.info("开始监听 - Mode: {}", message.getMode());
 
                 chatSession.transitionTo(DeviceState.LISTENING);
@@ -399,7 +414,6 @@ public class MessageHandler {
                 if (shakePrompt) {
                     DivinationSessionHelper.onShakePrompt(chatSession);
                 }
-                Player player = chatSession.getPlayer();
                 // 摇一摇 hidden prompt 不 abort，避免设备端收到空 tts:stop 提前结束占卜
                 if (player != null && !shakePrompt) {
                     String modeValue = message.getMode() != null ? message.getMode().getValue() : null;
