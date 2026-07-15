@@ -29,6 +29,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -44,8 +45,14 @@ import lombok.extern.slf4j.Slf4j;
  * 通过配置 {@code enableThinking} 控制是否启用推理模式（{@code reasoningEffort}）。
  * <p>
  * 当 endpoint 命中 MiniMax（{@code api.minimaxi.com} 或包含 {@code minimax}）时，
- * 无论 {@code enableThinking} 取值，HTTP 请求体都会显式注入
- * {@code "thinking": {"type": "disabled"}}，确保 MiniMax 关闭思考模式。
+ * 行为按模型版本分支：
+ * <ul>
+ *   <li><b>M2 及更早</b>（如 {@code abab6.5s-chat}、{@code MiniMax-M2}）：
+ *       注入 {@code "thinking": {"type": "disabled"}} 和 {@code "reasoning_split": true}。
+ *       这两个参数是旧模型私有的，M3+ 不再识别。</li>
+ *   <li><b>M3 及更新</b>（如 {@code MiniMax-M3}）：不注入任何私有字段。
+ *       思考控制应改用 OpenAI 兼容的 {@code reasoning_effort}（由 {@code enableThinking} 决定）。</li>
+ * </ul>
  * 实现路径：
  * <ul>
  *   <li>同步路径：{@link RestClient} 的 {@link ClientHttpRequestInterceptor}</li>
@@ -80,6 +87,9 @@ public class OpenAiModelProvider implements ChatModelProvider {
         Double topP = role.getTopP();
 
         boolean isMiniMax = isMiniMaxEndpoint(endpoint);
+        // M3+ 不再识别 thinking.type=disabled / reasoning_split（M2 私有参数），
+        // 只有 M2 及更早才需要注入。
+        boolean isLegacyMiniMax = isMiniMax && isLegacyMiniMaxModel(model);
 
         MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
         headers.add("Content-Type", "application/json");
@@ -93,8 +103,13 @@ public class OpenAiModelProvider implements ChatModelProvider {
                 .requestFactory(createRequestFactory());
 
         if (isMiniMax) {
-            webClientBuilder.filter(miniMaxThinkingFilter());
-            restClientBuilder.requestInterceptor(miniMaxThinkingInterceptor());
+            // 诊断 dump filter 在所有 MiniMax 端点上启用，便于追踪 4xx 响应 body。
+            webClientBuilder.filter(miniMaxResponseDumpFilter());
+            // thinking/reasoning_split 注入仅在 M2 旧模型上启用，M3+ 跳过。
+            if (isLegacyMiniMax) {
+                webClientBuilder.filter(miniMaxThinkingFilter());
+                restClientBuilder.requestInterceptor(miniMaxThinkingInterceptor());
+            }
         }
 
         // LM Studio不支持Http/2，所以需要强制使用HTTP/1.1
@@ -122,7 +137,11 @@ public class OpenAiModelProvider implements ChatModelProvider {
         }
 
         if (isMiniMax) {
-            log.info("OpenAI model {} endpoint {} 已注入 thinking={{type:disabled}} 和 reasoning_split=true", model, endpoint);
+            if (isLegacyMiniMax) {
+                log.info("OpenAI model {} endpoint {} (legacy M2) 已注入 thinking={{type:disabled}} 和 reasoning_split=true", model, endpoint);
+            } else {
+                log.info("OpenAI model {} endpoint {} (>=M3) 跳过 thinking/reasoning_split 注入，使用 OpenAI 兼容 reasoning_effort", model, endpoint);
+            }
         }
 
         var openAiChatOptions = chatOptionsBuilder.build();
@@ -179,6 +198,49 @@ public class OpenAiModelProvider implements ChatModelProvider {
         }
         String lower = endpoint.toLowerCase(Locale.ROOT);
         return lower.contains("minimaxi") || lower.contains("minimax");
+    }
+
+    /**
+     * 判断模型名是否属于 MiniMax 旧版（M2 及更早）模型族。
+     * <p>
+     * 旧版模型（如 {@code abab6.5s-chat}、{@code abab5.5-chat}、{@code MiniMax-M2}）使用
+     * 私有参数 {@code thinking.type=disabled} 和 {@code reasoning_split} 控制思考行为。
+     * 新版模型（{@code MiniMax-M3} 及以后）改用 OpenAI 兼容的 {@code reasoning_effort}，
+     * 不再识别上述两个私有字段；继续注入反而会被服务端拒绝（400 BadRequest）。
+     * <p>
+     * 判定规则：
+     * <ul>
+     *   <li>模型名包含 {@code -M3} / {@code M3-} / {@code -M4} 等 ≥M3 后缀：{@code false}</li>
+     *   <li>模型名包含 {@code -M1} / {@code -M2} / {@code abab} / {@code MiniMax-Text-01}：{@code true}
+     *       （保守起见，未知名称也按旧版处理，让注入照常进行）</li>
+     *   <li>空/未知名称：{@code true}（保守策略，行为不变）</li>
+     * </ul>
+     */
+    static boolean isLegacyMiniMaxModel(String model) {
+        if (!StringUtils.hasText(model)) {
+            return true;
+        }
+        String lower = model.toLowerCase(Locale.ROOT);
+        // M3 及以上统一不注入（"m3"、"m4" 单独作为 token 出现；"-m3" / "m3-" 视为新版）。
+        // 用 tokenizer-lite 的方式扫描：把非字母数字字符当分隔符。
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(?i)(?:^|[^a-z0-9])(m\\d{1,2})(?:[^a-z0-9]|$)")
+                .matcher(lower);
+        while (m.find()) {
+            String token = m.group(1).toLowerCase(Locale.ROOT);
+            if (token.startsWith("m")) {
+                try {
+                    int ver = Integer.parseInt(token.substring(1));
+                    if (ver >= 3) {
+                        return false;
+                    }
+                } catch (NumberFormatException ignored) {
+                    // 不是纯数字版本号，继续下一个匹配
+                }
+            }
+        }
+        // 未检测到 ≥M3 版本号 → 视为旧版
+        return true;
     }
 
     /**
@@ -244,5 +306,148 @@ public class OpenAiModelProvider implements ChatModelProvider {
             log.debug("MiniMax WebClient stream path: 依赖同步 interceptor 控制 thinking");
             return next.exchange(request);
         };
+    }
+
+    /**
+     * 诊断专用 filter：dump 请求 URL/Headers、响应状态/Headers/错误体到
+     * logs/minimax-debug.log，便于定位 400 错误根因。
+     * <p>
+     * <b>关键实现</b>：当响应是 4xx/5xx 时，{@code ClientResponse} 的 body publisher
+     * 尚未被订阅，{@code WebClientResponseException.getResponseBodyAsString()} 拿到的是空。
+     * 本 filter 在 {@code doOnNext} 阶段就主动把 body 读为 {@code byte[]}，记录到 dump，
+     * 然后用 {@code ClientResponse.create(...).body(byte[])} 重建一个等价的响应
+     * 传给下游，<u>不破坏流式</u>。
+     * <p>
+     * 成功响应（2xx）的 body 仍走原始流式 publisher，不读取。
+     */
+    private static ExchangeFilterFunction miniMaxResponseDumpFilter() {
+        final java.util.concurrent.atomic.AtomicInteger seq = new java.util.concurrent.atomic.AtomicInteger(0);
+        return (request, next) -> {
+            int id = seq.incrementAndGet();
+            long t0 = System.nanoTime();
+            StringBuilder dump = new StringBuilder(2048);
+            dump.append("\n========== MiniMax LLM call #").append(id).append(" ==========\n");
+            dump.append("TIME: ").append(java.time.LocalDateTime.now()).append('\n');
+            dump.append("METHOD: ").append(request.method()).append('\n');
+            dump.append("URL: ").append(request.url()).append('\n');
+            dump.append("REQUEST HEADERS:\n");
+            request.headers().forEach((k, v) -> {
+                String joined = String.join(",", v);
+                // 鉴权头只打印前 8 字符 + 省略号，避免日志泄露完整 key
+                if (k.equalsIgnoreCase("Authorization") && joined.length() > 12) {
+                    joined = joined.substring(0, 12) + "...(redacted," + joined.length() + " chars)";
+                }
+                dump.append("  ").append(k).append(": ").append(joined).append('\n');
+            });
+            dump.append("(request body omitted; ChatCompletion request body is captured separately if needed)\n");
+
+            return next.exchange(request)
+                .flatMap((ClientResponse resp) -> {
+                    long costMs = (System.nanoTime() - t0) / 1_000_000L;
+                    dump.append("STATUS: ").append(resp.statusCode().value());
+                    if (resp.statusCode().isError()) {
+                        dump.append(" (error)");
+                    }
+                    dump.append('\n');
+                    dump.append("COST: ").append(costMs).append(" ms\n");
+                    dump.append("RESPONSE HEADERS:\n");
+                    resp.headers().asHttpHeaders().forEach((k, v) ->
+                        dump.append("  ").append(k).append(": ").append(String.join(",", v)).append('\n'));
+
+                    if (resp.statusCode().isError()) {
+                        // 4xx/5xx：主动消费 body 拿真实错误内容，然后重建 ClientResponse 传给下游
+                        return resp.bodyToMono(byte[].class)
+                                .defaultIfEmpty(new byte[0])
+                                .<ClientResponse>map(bodyBytes -> {
+                                    dump.append("ERROR RESPONSE BODY (").append(bodyBytes.length).append(" bytes):\n");
+                                    if (bodyBytes.length > 0) {
+                                        String bodyStr = new String(bodyBytes, java.nio.charset.StandardCharsets.UTF_8);
+                                        dump.append(bodyStr);
+                                        if (!bodyStr.endsWith("\n")) {
+                                            dump.append('\n');
+                                        }
+                                    } else {
+                                        dump.append("(empty body)\n");
+                                    }
+                                    // 重建 ClientResponse：相同 status + headers + byte[] 包装的 body
+                                    org.springframework.core.io.buffer.DataBuffer buf =
+                                        org.springframework.core.io.buffer.DefaultDataBufferFactory.sharedInstance
+                                            .wrap(bodyBytes);
+                                    ClientResponse newResp = ClientResponse.create(resp.statusCode())
+                                            .headers(h -> h.addAll(resp.headers().asHttpHeaders()))
+                                            .body(reactor.core.publisher.Flux.just(buf))
+                                            .build();
+                                    return newResp;
+                                })
+                                .doOnError(err -> {
+                                    dump.append("(failed to read error body: ").append(err.getClass().getName())
+                                        .append(": ").append(err.getMessage()).append(")\n");
+                                })
+                                .onErrorResume(err -> {
+                                    // body 读取失败时回传原响应让下游处理
+                                    return reactor.core.publisher.Mono.just(resp);
+                                });
+                    } else {
+                        // 2xx 成功响应：原样透传，不读取 body（保留流式）
+                        return reactor.core.publisher.Mono.just(resp);
+                    }
+                })
+                .doOnError(err -> {
+                    long costMs = (System.nanoTime() - t0) / 1_000_000L;
+                    dump.append("COST: ").append(costMs).append(" ms\n");
+                    dump.append("ERROR: ").append(err.getClass().getName())
+                        .append(": ").append(err.getMessage()).append('\n');
+                    if (err instanceof org.springframework.web.reactive.function.client.WebClientResponseException wcre) {
+                        String body = wcre.getResponseBodyAsString();
+                        if (body != null && !body.isEmpty()) {
+                            dump.append("ERROR RESPONSE BODY (from exception, ")
+                                .append(body.length()).append(" bytes):\n");
+                            dump.append(body).append('\n');
+                        } else {
+                            dump.append("(WebClientResponseException.getResponseBodyAsString returned empty — ")
+                                .append("body should have been captured by flatMap above)\n");
+                        }
+                    } else {
+                        // 非 4xx/5xx 异常（如连接超时、SocketException），附 cause chain
+                        dump.append("CAUSE CHAIN:\n");
+                        Throwable cur = err;
+                        int depth = 0;
+                        while (cur != null && depth < 3) {
+                            dump.append("  [").append(depth).append("] ")
+                                .append(cur.getClass().getName()).append(": ").append(cur.getMessage()).append('\n');
+                            cur = cur.getCause();
+                            depth++;
+                        }
+                    }
+                    writeMiniMaxDebug(dump);
+                })
+                .doOnSuccess(v -> writeMiniMaxDebug(dump))
+                .doFinally(sig -> writeMiniMaxDebug(dump));
+        };
+    }
+
+    private static final java.util.concurrent.ConcurrentLinkedQueue<String> DUMP_QUEUE = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    private static final java.util.concurrent.atomic.AtomicBoolean WRITER_STARTED = new java.util.concurrent.atomic.AtomicBoolean(false);
+    private static void writeMiniMaxDebug(StringBuilder dump) {
+        DUMP_QUEUE.offer(dump.toString());
+        if (WRITER_STARTED.compareAndSet(false, true)) {
+            Thread t = new Thread(() -> {
+                try (var fw = new java.io.FileWriter("./logs/minimax-debug.log", true)) {
+                    while (true) {
+                        String s;
+                        while ((s = DUMP_QUEUE.poll()) != null) {
+                            fw.write(s);
+                            fw.flush();
+                        }
+                        Thread.sleep(200);
+                    }
+                } catch (Throwable th) {
+                    org.slf4j.LoggerFactory.getLogger(OpenAiModelProvider.class)
+                        .error("minimax-debug.log writer crashed", th);
+                }
+            }, "minimax-debug-writer");
+            t.setDaemon(true);
+            t.start();
+        }
     }
 }
