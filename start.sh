@@ -370,8 +370,14 @@ start_service() {
     return 1
   fi
 
+  # JVM 堆内存默认 1GB（-Xms1g -Xmx1g），保证服务内存与 CPU 资源充足
+  # 可通过环境变量 JAVA_HEAP_SIZE 覆盖，如 `JAVA_HEAP_SIZE=2g ./start.sh start`
+  local java_heap="${JAVA_HEAP_SIZE:-1g}"
+
   nohup "$JAVA_HOME/bin/java" \
     -Djava.library.path="$ROOT_DIR/lib" \
+    -Xms"$java_heap" \
+    -Xmx"$java_heap" \
     -jar "$jar" \
     >> "$LOGS_DIR/$name.log" 2>&1 &
 
